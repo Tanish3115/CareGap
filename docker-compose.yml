@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: caregap360_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: caregap_user
+      POSTGRES_PASSWORD: caregap_password
+      POSTGRES_DB: caregap360_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caregap_user -d caregap360_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: caregap360_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://caregap_user:caregap_password@postgres:5432/caregap360_db
+      SECRET_KEY: dev-insecure-secret-key-change-in-production-caregap360-super-secret
+      STORAGE_DIR: /app/storage/documents
+      CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - document_vault:/app/storage/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: caregap360_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  document_vault:
+

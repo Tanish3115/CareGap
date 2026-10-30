@@ -1,0 +1,25 @@
+# Implementation roadmap and progress
+
+Baseline: 30 October 2026. This document records observed status, not promised functionality. Dependencies proceed from top to bottom; the supplied master prompt remains the product specification.
+
+| Milestone | Current status | Work and measurable acceptance criteria |
+| --- | --- | --- |
+| 0: reproducible review environment | Blocked locally | Replace/recreate the broken Python environment without deleting existing records. Install reproducible dependencies. Isolate test engine/storage and verify no workspace database/files change. Execute all existing tests and record results. Establish Git source control. |
+| 1: safe first vertical slice | Partial; critical defects open | Remove public administrative privilege, implicit administrator clinical access and doctor upload bypass. Require verified doctors and explicit action/scope authorization. Reject invalid files and escaping paths. Test absent, expired, revoked, future, unknown and multiple scopes; unverified doctors; cross-patient reads/writes; invalid patient IDs; invalid dates; empty/spoofed/oversized files; and JWT expiration. Pass API tests through registration, upload, list, metadata and download. |
+| 2: persistence and local deployment | Partial | Add Alembic baseline/upgrade tests and matching PostgreSQL driver. Fix Docker build context, absent public directory and browser API configuration. Configure secrets and development mode explicitly. Fresh Compose startup must pass PostgreSQL-backed integration tests and browser registration/login/upload/download. Document setup and backup restoration. |
+| 3: patient sharing and operational roles | Partial model only | Add organizations, professional verification records, access requests, patient approval/denial, scoped grants, revocation and patient-visible access history. Doctor sees only permitted patients; administrator sees operational metadata. Test approval and revocation through actual APIs/UI, including subsequent download denial. |
+| 4: longitudinal records | Mostly unimplemented | Add visits, diagnoses, allergies, laboratory results, referrals and follow-up tasks with provenance/revisions. Implement timeline and authorized search. Verify source preservation and ownership for every record type. |
+| 5: prescription processing | Unimplemented | Add private object-storage adapter, queue, OCR/extraction contracts, retained original text, uncertainty fields and editable review. Failed jobs must be visible/retryable without duplicate clinical records. Test unclear handwriting, missing strength, similar drug names, conflicting dates and wrong patient association; unreviewed extraction cannot become trusted medication data. |
+| 6: medication reconciliation | Unimplemented | Distinguish orders, dispensing, reported use and confirmed use; compare original sources and record reconciliation events. Test duplicates, overlaps, contradictory/incomplete instructions. Integrate a verified knowledge provider or an explicitly synthetic demo interface; alerts require source evidence and clinician review. |
+| 7: coordination and baseline analytics | Unimplemented | Capture scheduled and completed follow-ups/referrals/tests; add preferences and mock notification providers with delivery history. Build reproducible synthetic-data baselines with held-out temporal evaluation, PR-AUC, calibration, false-positive and subgroup reporting. Clearly label synthetic results. |
+| 8: interventions | Unimplemented | Record permitted intervention, assignment/reason, time, staff reviewer, outcome and missingness. Start with reviewable rules. Write a causal evaluation protocol addressing confounding/selection bias; do not label correlations as individual treatment effects. |
+| 9: summaries and interoperability | Unimplemented | Summarize authorized records with statement-level sources and explicit verified/reported/uncertain categories. Add tested FHIR mappings and multilingual accessibility. ABDM remains optional preparation until actual authorization/conformance. |
+| 10: deployment hardening | Unimplemented beyond initial scaffold | CI, backend/frontend/E2E regression, accessibility/performance checks, rate limiting, session controls, log redaction, encryption/key management, retention/deletion, monitoring, backup/restore drill and staging documentation. Clinical/legal/security review remains a separate deployment gate. |
+
+## Next recommended milestone
+
+Restore isolated backend test execution, then close the critical authorization paths before adding AI features. Follow with a PostgreSQL/Compose/browser proof of the first vertical slice. Do not mark any milestone complete solely because code or a dependency exists.
+
+## Review changes
+
+Added an implementation-grounded architecture document, this roadmap, and a prioritized requirements/security review. Updated README to distinguish current code from target capabilities. Application authorization and persistence behavior were not modified as part of this inspection.
