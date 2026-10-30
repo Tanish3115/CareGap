@@ -42,7 +42,7 @@ PostgreSQL migrations and API regression have been exercised against a dedicated
 | `backend/app/services` | Shared authorization, session issuance, filesystem storage and audit persistence. |
 | `backend/app/database.py` | Engine, declarative base and request sessions. |
 | `backend/tests` | Isolated authentication, authorization, consent, storage and migration regression tests. |
-| `backend/migrations` | Original six-table baseline and sessions/consent/verification revision. |
+| `backend/migrations` | Original six-table baseline, sessions/consent/verification revision, and patient sharing-code migration. |
 | `scripts` | Secret configuration, legacy-schema migration and disposable test environments. |
 
 ### Actual data model
@@ -64,7 +64,7 @@ erDiagram
     USER ||--o{ DOCTOR_VERIFICATION : reviewer
 ```
 
-Patient IDs are independent UUIDs. Documents retain uploader, owner, original filename, relative path, validated MIME type, length, checksum, status, optional clinical date and timestamps. Clinical version history is not implemented. Consent supports document categories, optional selected IDs, explicit upload permission, expiration and revocation. Access requests and professional verification decisions have persisted histories.
+Internal patient IDs are independent UUIDs. Patients share a unique, randomly generated short code such as `CG-48273184`; consent requests resolve it to the original UUID before applying the same authorization rules. Documents retain uploader, owner, original filename, relative path, validated MIME type, length, checksum, status, optional clinical date and timestamps. Clinical version history is not implemented. Consent supports document categories, optional selected IDs, explicit upload permission, expiration and revocation. Access requests and professional verification decisions have persisted histories.
 
 ### Current upload/download flow
 

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class PatientProfile(BaseModel):
     id: str
+    patient_code: str
     user_id: str
     full_name: str
     email: str

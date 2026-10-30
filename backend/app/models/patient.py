@@ -4,12 +4,14 @@ from datetime import datetime, date
 from sqlalchemy import String, Text, Date, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+from app.core.identifiers import new_patient_code
 
 
 class Patient(Base):
     __tablename__ = "patients"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    patient_code: Mapped[str] = mapped_column(String(11), unique=True, index=True, nullable=False, default=new_patient_code)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=True)
     gender: Mapped[str] = mapped_column(String(20), nullable=True)

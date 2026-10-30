@@ -12,7 +12,7 @@ type Grant = { id: string; doctor_name: string; scope: string; valid_until: stri
 type Audit = { id: string; action: string; resource_type: string; created_at: string; actor_name?: string };
 type Doctor = { id: string; full_name: string; license_number: string; specialization: string; verification_status: string };
 type Person = { id: string; full_name: string; upload_types: DocumentType[] };
-type CurrentUser = User & { patient?: { id: string }; doctor?: { verification_status: string } };
+type CurrentUser = User & { patient?: { id: string; patient_code: string }; doctor?: { verification_status: string } };
 const field = "w-full rounded-lg border border-slate-300 bg-white p-2 text-sm";
 const button = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700";
 
@@ -81,7 +81,7 @@ export function CareWorkspace({ user }: { user: CurrentUser }) {
         <label className="text-sm">Emergency contact<input maxLength={100} value={profile.emergency_contact || ""} onChange={e => setProfile({ ...profile, emergency_contact: e.target.value })} className={field} /></label>
         <label className="text-sm md:col-span-2">Address<textarea maxLength={2000} value={profile.address || ""} onChange={e => setProfile({ ...profile, address: e.target.value })} className={field} /></label><button disabled={busy} className={button}>Save profile</button>
       </form></details>}
-      <div className="rounded-xl border bg-white p-5"><h3 className="font-semibold">Your patient identifier</h3><p className="mt-2 break-all font-mono text-sm">{user.patient?.id}</p><p className="mt-2 text-xs text-slate-500">Share this identifier with your clinician to receive an access request. It does not grant access by itself.</p></div>
+      <div className="rounded-xl border bg-white p-5"><h3 className="font-semibold">Your patient ID</h3><p className="mt-2 font-mono text-xl font-bold tracking-wider">{user.patient?.patient_code}</p><p className="mt-2 text-xs text-slate-500">Share this short ID with your clinician to receive an access request. You still decide whether to approve access.</p></div>
       <div className="space-y-3"><h3 className="font-semibold">Access requests</h3>{requests.length === 0 && <p className="text-sm text-slate-500">No access requests.</p>}
         {requests.map(r => <article key={r.id} className="space-y-3 rounded-xl border bg-white p-5">
           <p className="font-semibold">{r.doctor_name} <span className="text-xs text-slate-500">· {r.status}</span></p>
@@ -102,7 +102,7 @@ export function CareWorkspace({ user }: { user: CurrentUser }) {
     {user.role === "doctor" && (user.doctor?.verification_status !== "verified" ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-6"><h3 className="font-semibold">Professional verification required</h3><p className="mt-2 text-sm">Current status: {user.doctor?.verification_status || "pending"}. An administrator must review your professional evidence before you can request or access patient information.</p></div> : <>
       <form className="grid gap-4 rounded-xl border bg-white p-5 md:grid-cols-2" onSubmit={sendRequest}>
         <h3 className="font-semibold md:col-span-2">Request patient access</h3>
-        <label className="space-y-1 text-sm">Patient identifier<input required value={patientId} onChange={e => setPatientId(e.target.value)} className={field} /></label>
+        <label className="space-y-1 text-sm">Patient ID<input required maxLength={36} autoComplete="off" spellCheck={false} placeholder="e.g. CG-48273184" aria-label="Patient ID" aria-describedby="patient-id-help" value={patientId} onChange={e => setPatientId(e.target.value.toUpperCase())} className={field} /><span id="patient-id-help" className="block text-xs text-slate-500">Example: CG-48273184. Find this ID on the patient&apos;s dashboard.</span></label>
         <label className="space-y-1 text-sm">Purpose<input required minLength={5} maxLength={255} value={purpose} onChange={e => setPurpose(e.target.value)} className={field} /></label>
         <label className="space-y-1 text-sm">Record scope<select value={scope} onChange={e => setScope(e.target.value)} className={field}><option value="all">All document categories</option><option value="prescriptions_only">Prescriptions</option><option value="labs_only">Lab reports</option></select></label>
         <label className="space-y-1 text-sm">Duration in hours<input required type="number" min={1} max={720} value={hours} onChange={e => setHours(Number(e.target.value))} className={field} /></label>

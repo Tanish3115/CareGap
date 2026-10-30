@@ -23,6 +23,7 @@ def get_my_patient_profile(
     audit_service.log_event(db, "VIEW_RECORD", "patient_profile", actor_id=user.id, patient_id=patient.id)
     return PatientProfile(
         id=patient.id,
+        patient_code=patient.patient_code,
         user_id=user.id,
         full_name=user.full_name,
         email=user.email,
@@ -54,6 +55,7 @@ def update_my_patient_profile(
 
     return PatientProfile(
         id=patient.id,
+        patient_code=patient.patient_code,
         user_id=user.id,
         full_name=user.full_name,
         email=user.email,

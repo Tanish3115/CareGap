@@ -11,6 +11,7 @@ export interface User {
 
 export interface PatientProfile {
   id: string;
+  patient_code: string;
   user_id: string;
   full_name: string;
   email: string;

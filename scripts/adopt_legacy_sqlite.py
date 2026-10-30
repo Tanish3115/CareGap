@@ -34,6 +34,8 @@ def adopt(backup_directory=None):
         expected = set(Base.metadata.tables[name].columns.keys())
         if name == "consent_grants":
             expected -= {"allow_upload", "document_ids"}
+        elif name == "patients":
+            expected -= {"patient_code"}
         actual = {column["name"] for column in inspector.get_columns(name)}
         if actual != expected:
             raise SystemExit(f"Unexpected {name} schema; no changes made.")

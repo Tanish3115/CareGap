@@ -80,7 +80,8 @@ test("verified clinician requests access; patient approves and revokes it", asyn
   const verified = await admin.request.post(`/api/v1/admin/doctors/${doctorMe.doctor.id}/verification`, { data: { status: "verified", evidence_reference: "Synthetic E2E verification evidence; not a real clinician" } });
   expect(verified.status()).toBe(200);
   await clinicianPage.reload();
-  await clinicianPage.getByLabel("Patient identifier", { exact: true }).fill(me.patient.id);
+  await expect(clinicianPage.getByPlaceholder("e.g. CG-48273184")).toBeVisible();
+  await clinicianPage.getByLabel("Patient ID", { exact: true }).fill(me.patient.patient_code);
   await clinicianPage.getByLabel("Purpose", { exact: true }).fill("Synthetic continuity review");
   await clinicianPage.getByLabel("Record scope").selectOption("prescriptions_only");
   await clinicianPage.getByRole("button", { name: "Send access request" }).click();

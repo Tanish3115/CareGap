@@ -1,9 +1,9 @@
 from app.core.time import utc_now
 from datetime import datetime, timedelta
 from uuid import UUID
-from typing import Literal
+from typing import Literal, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -23,11 +23,16 @@ router = APIRouter(prefix="/consent", tags=["Patient consent"])
 
 
 class AccessRequestIn(BaseModel):
-    patient_id: UUID
+    patient_id: UUID | Annotated[str, Field(pattern=r"^CG-[1-9][0-9]{7}$")]
     scope: Literal["all", "prescriptions_only", "labs_only"]
     purpose: str = Field(min_length=5, max_length=255)
     duration_hours: int = Field(default=24, ge=1, le=720)
     allow_upload: bool = False
+
+    @field_validator("patient_id", mode="before")
+    @classmethod
+    def normalize_patient_id(cls, value):
+        return value.strip().upper() if isinstance(value, str) else value
 
 
 class DecisionIn(BaseModel):
@@ -47,11 +52,13 @@ def request_out(db, item):
 @router.post("/requests", status_code=201)
 def create_request(payload: AccessRequestIn, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     doctor = verified_doctor(db, user)
-    if not db.get(Patient, str(payload.patient_id)):
+    patient = (db.get(Patient, str(payload.patient_id)) if isinstance(payload.patient_id, UUID)
+               else db.query(Patient).filter_by(patient_code=payload.patient_id).first())
+    if not patient:
         raise HTTPException(400, "Unable to request access for this identifier")
-    if db.query(AccessRequest).filter_by(doctor_id=doctor.id, patient_id=str(payload.patient_id), status="pending").first():
+    if db.query(AccessRequest).filter_by(doctor_id=doctor.id, patient_id=patient.id, status="pending").first():
         raise HTTPException(409, "An access request is already pending")
-    item = AccessRequest(doctor_id=doctor.id, **payload.model_dump(exclude={"patient_id"}), patient_id=str(payload.patient_id))
+    item = AccessRequest(doctor_id=doctor.id, **payload.model_dump(exclude={"patient_id"}), patient_id=patient.id)
     db.add(item)
     try:
         db.flush()

@@ -15,6 +15,7 @@ from app.models.doctor import Doctor, DoctorVerificationStatus
 from app.models.audit import AuditAction
 from app.schemas.auth import UserRegister, UserLogin, TokenResponse, UserOut
 from app.services.audit_service import audit_service
+from app.services.patient_service import create_patient_profile
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -47,14 +48,13 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
 
     # Create specific role profile
     if payload.role == UserRole.PATIENT.value:
-        patient_profile = Patient(
+        patient_profile = create_patient_profile(db,
             user_id=new_user.id,
             date_of_birth=payload.date_of_birth,
             gender=payload.gender,
             blood_group=payload.blood_group,
             emergency_contact=payload.emergency_contact,
         )
-        db.add(patient_profile)
     elif payload.role == UserRole.DOCTOR.value:
         if not payload.license_number or not payload.specialization:
             raise HTTPException(
@@ -170,6 +170,7 @@ def get_current_user_profile(
     if current_user.role == UserRole.PATIENT.value and current_user.patient_profile:
         profile_data["patient"] = {
             "id": current_user.patient_profile.id,
+            "patient_code": current_user.patient_profile.patient_code,
             "date_of_birth": current_user.patient_profile.date_of_birth,
             "gender": current_user.patient_profile.gender,
             "blood_group": current_user.patient_profile.blood_group,

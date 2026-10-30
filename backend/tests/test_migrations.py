@@ -19,9 +19,14 @@ def test_migrations_match_models_and_preserve_baseline_rows(tmp_path, monkeypatc
     engine = create_engine(url)
     with engine.begin() as connection:
         connection.execute(text("INSERT INTO users (id,email,hashed_password,role,full_name,is_active,created_at,updated_at) VALUES ('synthetic','synthetic@example.test','test-hash','patient','Synthetic',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO patients (id,user_id,created_at) VALUES ('original-patient-id','synthetic',CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO medical_documents (id,patient_id,uploader_id,title,document_type,file_path,file_name,file_size,mime_type,sha256_hash,status,created_at,updated_at) VALUES ('original-document-id','original-patient-id','synthetic','Synthetic source','other','synthetic/file.pdf','file.pdf',123,'application/pdf','test-checksum','uploaded',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
     command.upgrade(config, "head")
     with engine.connect() as connection:
         assert connection.execute(text("SELECT full_name FROM users WHERE id='synthetic'")).scalar_one() == "Synthetic"
+        code = connection.execute(text("SELECT patient_code FROM patients WHERE id='original-patient-id'")).scalar_one()
+        assert code.startswith("CG-") and len(code) == 11 and code[3:].isdigit()
+        assert connection.execute(text("SELECT patient_id FROM medical_documents WHERE id='original-document-id'")).scalar_one() == "original-patient-id"
         assert compare_metadata(MigrationContext.configure(connection), Base.metadata) == []
     command.downgrade(config, "0001")
     assert "auth_sessions" not in inspect(engine).get_table_names()
@@ -46,7 +51,7 @@ def test_legacy_adoption_backs_up_and_preserves_records(tmp_path, monkeypatch):
     assert len(list(backup.glob("*.db"))) == 1
     with engine.connect() as connection:
         assert connection.execute(text("SELECT full_name FROM users WHERE id='synthetic'")).scalar_one() == "Synthetic preservation test"
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003"
     engine.dispose()
 
 
