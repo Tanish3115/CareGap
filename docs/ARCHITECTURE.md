@@ -9,10 +9,14 @@ The intended product is a patient-controlled longitudinal health record platform
 ```mermaid
 flowchart LR
     U[Patient / doctor browser] --> N[Next.js App Router\nTypeScript + Tailwind]
-    N -->|JSON / multipart / Bearer JWT| A[FastAPI modular monolith]
-    A --> Auth[Auth routes\nbcrypt + JWT]
+    N -->|Same-origin proxy / HttpOnly cookie| A[FastAPI modular monolith]
+    A --> Auth[Auth routes\nbcrypt + revocable JWT sessions]
     A --> P[Patient profile routes]
-    A --> D[Document routes\ninline access checks]
+    A --> D[Document routes\nshared authorization policy]
+    A --> Consent[Access requests / grants / revocation]
+    A --> Admin[Professional verification\noperational metadata only]
+    Consent --> DB
+    Admin --> DB
     Auth --> DB[(SQLAlchemy\nSQLite locally / PostgreSQL configured)]
     P --> DB
     D --> DB
@@ -22,22 +26,24 @@ flowchart LR
     Audit --> DB
 ```
 
-PostgreSQL is configured in Compose but not runtime-verified; its Python driver is missing. Storage is local filesystem/Compose volume, not S3/MinIO. Redis, Celery and AI services are absent. See the review for defects in the current access checks.
+PostgreSQL migrations and API regression have been exercised against a dedicated synthetic database. Storage remains local filesystem/Compose volume, not S3/MinIO. Files are parsed at ingestion and checksummed again at download. Redis, Celery and AI services are absent. See PROGRESS.md for the latest checks and deployment limitations.
 
 ### Responsibilities
 
 | Location | Responsibility |
 | --- | --- |
 | `frontend/src/app` | Landing, registration, login and shared dashboard routes. |
-| `frontend/src/lib` | Fetch client, localStorage authentication helpers and formatting. |
+| `frontend/src/lib` | Same-origin fetch client, credential cleanup helpers and formatting; tokens are not persisted in browser storage. |
 | `frontend/src/components` | Navigation, document cards, stats and upload form. |
-| `backend/app/api` | HTTP handlers, authentication dependencies, profile and document operations. |
+| `backend/app/api` | Auth/session, patient profile, document, consent and operational admin handlers. |
 | `backend/app/core` | Password/token functions and HTTP error types. |
 | `backend/app/models` | SQLAlchemy persistence entities. |
 | `backend/app/schemas` | Pydantic API request/response contracts. |
-| `backend/app/services` | Filesystem storage and audit persistence. |
+| `backend/app/services` | Shared authorization, session issuance, filesystem storage and audit persistence. |
 | `backend/app/database.py` | Engine, declarative base and request sessions. |
-| `backend/tests` | Fifteen backend test functions; current environment cannot execute them. |
+| `backend/tests` | Isolated authentication, authorization, consent, storage and migration regression tests. |
+| `backend/migrations` | Original six-table baseline and sessions/consent/verification revision. |
+| `scripts` | Secret configuration, legacy-schema migration and disposable test environments. |
 
 ### Actual data model
 
@@ -50,17 +56,24 @@ erDiagram
     PATIENT ||--o{ CONSENT_GRANT : grants
     DOCTOR ||--o{ CONSENT_GRANT : receives
     USER o|--o{ AUDIT_LOG : actor
+    USER ||--o{ AUTH_SESSION : authenticates
+    PATIENT ||--o{ ACCESS_REQUEST : receives
+    DOCTOR ||--o{ ACCESS_REQUEST : submits
+    ACCESS_REQUEST o|--o| CONSENT_GRANT : approves
+    DOCTOR ||--o{ DOCTOR_VERIFICATION : reviewed
+    USER ||--o{ DOCTOR_VERIFICATION : reviewer
 ```
 
-Patient IDs are independent UUIDs. Documents retain uploader, owner, original filename, relative storage path, MIME header, length, upload checksum, status, optional clinical date and timestamps. This preserves basic provenance but does not implement clinical version history or source verification. Audit `patient_id` is indexed metadata without a patient foreign key. Consent is coarse document-type scope with start/end/revocation fields; no access-request entity exists.
+Patient IDs are independent UUIDs. Documents retain uploader, owner, original filename, relative path, validated MIME type, length, checksum, status, optional clinical date and timestamps. Clinical version history is not implemented. Consent supports document categories, optional selected IDs, explicit upload permission, expiration and revocation. Access requests and professional verification decisions have persisted histories.
 
 ### Current upload/download flow
 
-1. Registration creates a user and a patient or pending doctor profile; login returns a signed bearer token.
-2. The browser stores the token in localStorage and adds it to API requests.
-3. Upload streams the file into a patient directory, calculates SHA-256, inserts document metadata and subsequently inserts an audit event.
-4. List/metadata/download query the database. Metadata/download use a shared access helper; listing implements separate authorization logic.
-5. Download resolves the stored path and returns a FileResponse. It does not recalculate the stored checksum.
+1. Public registration creates a patient or pending doctor. Administrator provisioning is an explicit CLI operation.
+2. Login creates a database session, sets an HttpOnly cookie and returns a bearer token for API clients. Every request checks active user/session state; logout revokes the session.
+3. Verified doctors require patient grants; uploads additionally require explicit permission. Administrators have no automatic clinical access.
+4. Upload validates ownership/consent, metadata, size and actual file content; hashes the source; and persists metadata plus audit event transactionally. Failure removes the staged file.
+5. List/metadata/download share the authorization service, combining effective grants and enforcing selected record IDs. SQL filtering precedes pagination.
+6. Download verifies path ancestry and recalculates SHA-256 before returning an authenticated attachment with no-store headers.
 
 ## Intended evolution, not implemented functionality
 

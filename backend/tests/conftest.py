@@ -4,11 +4,16 @@ import tempfile
 from pathlib import Path
 import pytest
 
+# Configure before importing application modules; never touch the workspace database.
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["SECRET_KEY"] = "test-only-key-with-at-least-thirty-two-characters"
+os.environ["ENVIRONMENT"] = "test"
+
 # Ensure backend directory is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -19,24 +24,34 @@ from app.models.user import User, UserRole
 from app.models.patient import Patient
 from app.models.doctor import Doctor, DoctorVerificationStatus
 from app.core.security import hash_password, create_access_token
+from app.services.session_service import issue_session
+from app.services.storage_service import storage_service
+from app.core.limiter import limiter
+
+limiter.enabled = False
 
 # Configure isolated in-memory test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+SQLALCHEMY_DATABASE_URL = os.environ.get("CAREGAP_TEST_DATABASE_URL", "sqlite:///:memory:")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    **({"connect_args": {"check_same_thread": False}, "poolclass": StaticPool}
+       if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}),
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_storage():
+@event.listens_for(engine, "connect")
+def enable_foreign_keys(connection, _):
+    if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+        connection.execute("PRAGMA foreign_keys=ON")
+
+
+@pytest.fixture(autouse=True)
+def setup_test_storage(tmp_path, monkeypatch):
     """Use a temporary folder for file storage during testing."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        settings.STORAGE_DIR = tmp_dir
-        yield
+    monkeypatch.setattr(storage_service, "base_dir", tmp_path.resolve())
+    yield
 
 
 @pytest.fixture
@@ -140,15 +155,21 @@ def doctor_user(db_session):
 
 
 @pytest.fixture
-def patient_token(patient_user):
-    return create_access_token(data={"sub": patient_user.id, "email": patient_user.email, "role": patient_user.role})
+def patient_token(patient_user, db_session):
+    token = issue_session(db_session, patient_user)
+    db_session.commit()
+    return token
 
 
 @pytest.fixture
-def second_patient_token(second_patient_user):
-    return create_access_token(data={"sub": second_patient_user.id, "email": second_patient_user.email, "role": second_patient_user.role})
+def second_patient_token(second_patient_user, db_session):
+    token = issue_session(db_session, second_patient_user)
+    db_session.commit()
+    return token
 
 
 @pytest.fixture
-def doctor_token(doctor_user):
-    return create_access_token(data={"sub": doctor_user.id, "email": doctor_user.email, "role": doctor_user.role})
+def doctor_token(doctor_user, db_session):
+    token = issue_session(db_session, doctor_user)
+    db_session.commit()
+    return token

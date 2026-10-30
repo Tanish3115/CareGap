@@ -1,124 +1,46 @@
-import { getAuthToken, clearAuthSession } from "./auth";
 import { AuthResponse, MedicalDocument, PatientProfile, PatientStats, User } from "@/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = getAuthToken();
-  const headers = new Headers(options.headers || {});
-
-  if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 401) {
-    clearAuthSession();
-    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-      window.location.href = "/login";
-    }
-    throw new Error("Session expired. Please log in again.");
-  }
-
+export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
+  const response = await fetch(`/api/v1${endpoint}`, { ...options, headers, credentials: "same-origin", cache: "no-store" });
   if (!response.ok) {
-    let errorDetail = "An unexpected error occurred.";
-    try {
-      const errorJson = await response.json();
-      errorDetail = errorJson.detail || JSON.stringify(errorJson);
-    } catch {
-      errorDetail = await response.text();
-    }
-    throw new Error(errorDetail);
+    const body = await response.json().catch(() => ({ detail: "Request failed" }));
+    const detail = Array.isArray(body.detail)
+      ? body.detail.map((e: { msg: string }) => e.msg).join("; ") : body.detail;
+    if (response.status === 401 && endpoint !== "/auth/login") throw new Error("Authentication required");
+    throw new Error(typeof detail === "string" ? detail : "Request failed. Please try again.");
   }
-
-  return response.json();
+  return response.status === 204 ? undefined as T : response.json();
 }
 
 export const api = {
   auth: {
-    login: (credentials: { email: string; password: string }): Promise<AuthResponse> =>
-      request<AuthResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-      }),
-
-    register: (userData: Record<string, any>): Promise<User> =>
-      request<User>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      }),
-
-    me: (): Promise<any> => request<any>("/auth/me"),
+    login: (data: { email: string; password: string }) => request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+    register: (data: Record<string, unknown>) => request<User>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    me: () => request<User & { patient?: PatientProfile; doctor?: { id: string; verification_status: string } }>("/auth/me"),
+    logout: () => request<void>("/auth/logout", { method: "POST" }),
   },
-
   documents: {
-    list: (docType?: string): Promise<MedicalDocument[]> => {
-      const query = docType ? `?document_type=${docType}` : "";
-      return request<MedicalDocument[]>(`/documents${query}`);
+    list: (docType?: string, patientId?: string) => {
+      const query = new URLSearchParams();
+      if (docType) query.set("document_type", docType);
+      if (patientId) query.set("patient_id", patientId);
+      return request<MedicalDocument[]>(`/documents?${query}`);
     },
-
-    upload: async (formData: FormData): Promise<{ message: string; document: MedicalDocument }> => {
-      const token = getAuthToken();
-      const headers = new Headers();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-
-      const response = await fetch(`${BASE_URL}/documents/upload`, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: "Upload failed" }));
-        throw new Error(error.detail || "Upload failed");
-      }
-
-      return response.json();
-    },
-
-    download: async (documentId: string, filename: string): Promise<void> => {
-      const token = getAuthToken();
-      const headers = new Headers();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-
-      const res = await fetch(`${BASE_URL}/documents/${documentId}/download`, {
-        headers,
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to download document");
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+    upload: (data: FormData) => request<{ message: string; document: MedicalDocument }>("/documents/upload", { method: "POST", body: data }),
+    download: async (id: string, filename: string) => {
+      const response = await fetch(`/api/v1/documents/${id}/download`, { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) throw new Error("Document unavailable or access no longer permitted.");
+      const url = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement("a");
+      anchor.href = url; anchor.download = filename; anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
   },
-
   patients: {
-    getProfile: (): Promise<PatientProfile> => request<PatientProfile>("/patients/me"),
-    getStats: (): Promise<PatientStats> => request<PatientStats>("/patients/summary/stats"),
+    getProfile: () => request<PatientProfile>("/patients/me"),
+    updateProfile: (data: Record<string, unknown>) => request<PatientProfile>("/patients/me", { method: "PUT", body: JSON.stringify(data) }),
+    getStats: () => request<PatientStats>("/patients/summary/stats"),
   },
 };
-

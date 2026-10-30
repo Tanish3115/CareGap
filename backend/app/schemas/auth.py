@@ -1,24 +1,32 @@
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from datetime import date
+from typing import Optional, Literal
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
-    full_name: str = Field(..., min_length=2)
-    role: str = Field("patient", pattern="^(patient|doctor|admin)$")
-    phone: Optional[str] = None
+    password: str = Field(..., min_length=12, max_length=72)
+    full_name: str = Field(..., min_length=2, max_length=255)
+    role: Literal["patient", "doctor"] = "patient"
+    phone: Optional[str] = Field(default=None, max_length=50)
     
     # Optional Doctor fields
-    license_number: Optional[str] = None
-    specialization: Optional[str] = None
-    hospital_affiliation: Optional[str] = None
+    license_number: Optional[str] = Field(default=None, max_length=100)
+    specialization: Optional[str] = Field(default=None, max_length=100)
+    hospital_affiliation: Optional[str] = Field(default=None, max_length=200)
     
     # Optional Patient fields
-    date_of_birth: Optional[str] = None
-    gender: Optional[str] = None
-    blood_group: Optional[str] = None
-    emergency_contact: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[str] = Field(default=None, max_length=20)
+    blood_group: Optional[str] = Field(default=None, max_length=10)
+    emergency_contact: Optional[str] = Field(default=None, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def password_byte_limit(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return value
 
 
 class UserLogin(BaseModel):

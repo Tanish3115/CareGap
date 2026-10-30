@@ -1,5 +1,7 @@
 # CareGap 360: master prompt review
 
+**Historical inspection:** this describes the repository before the subsequent development work. See [PROGRESS.md](PROGRESS.md) for fixes and current verification; do not treat the findings below as an up-to-date list of open defects.
+
 Review date: 30 October 2026. Scope: repository source, configuration, supplied master prompt, and available local checks. This is an engineering review, not a clinical or compliance certification. No existing patient records were read.
 
 ## Verdict

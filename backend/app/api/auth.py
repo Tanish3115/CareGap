@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from app.core.time import utc_now
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from app.config import settings
+from app.services.session_service import issue_session
+from app.models.session import AuthSession
+from app.core.security import decode_access_token
+from app.core.limiter import limiter
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
-from app.core.security import hash_password, verify_password, create_access_token
-from app.core.errors import CredentialsException
+from sqlalchemy.exc import IntegrityError
+from app.api.deps import get_db, get_current_user, session_token
+from app.core.security import hash_password, verify_password
 from app.models.user import User, UserRole
 from app.models.patient import Patient
 from app.models.doctor import Doctor, DoctorVerificationStatus
@@ -14,8 +20,9 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 def register_user(payload: UserRegister, request: Request, db: Session = Depends(get_db)):
-    """Register a new user (Patient, Doctor, or Admin) with their corresponding profile."""
+    """Public onboarding for patients and pending doctors only."""
     existing_user = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing_user:
         raise HTTPException(
@@ -32,12 +39,17 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
         phone=payload.phone,
     )
     db.add(new_user)
-    db.flush()  # Generate ID
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Registration conflicts with an existing account")
 
     # Create specific role profile
     if payload.role == UserRole.PATIENT.value:
         patient_profile = Patient(
             user_id=new_user.id,
+            date_of_birth=payload.date_of_birth,
             gender=payload.gender,
             blood_group=payload.blood_group,
             emergency_contact=payload.emergency_contact,
@@ -65,25 +77,24 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
         )
         db.add(doctor_profile)
 
-    db.commit()
-    db.refresh(new_user)
-
     client_ip = request.client.host if request.client else None
-    audit_service.log_event(
-        db=db,
-        action=AuditAction.REGISTER,
-        resource_type="user",
-        actor_id=new_user.id,
-        resource_id=new_user.id,
-        ip_address=client_ip,
-        details=f"User registered with role: {new_user.role}",
-    )
+    try:
+        audit_service.log_event(
+            db=db, action=AuditAction.REGISTER, resource_type="user", actor_id=new_user.id,
+            resource_id=new_user.id, ip_address=client_ip,
+            details=f"User registered with role: {new_user.role}", commit=False)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Registration conflicts with an existing account or license")
+    db.refresh(new_user)
 
     return new_user
 
 
 @router.post("/login", response_model=TokenResponse)
-def login_user(payload: UserLogin, request: Request, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_user(payload: UserLogin, request: Request, response: Response, db: Session = Depends(get_db)):
     """Authenticate with email and password to receive a JWT access token."""
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     client_ip = request.client.host if request.client else None
@@ -94,7 +105,7 @@ def login_user(payload: UserLogin, request: Request, db: Session = Depends(get_d
             action=AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
             resource_type="auth",
             ip_address=client_ip,
-            details=f"Failed login attempt for email: {payload.email}",
+            details="Failed login attempt",
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -107,9 +118,10 @@ def login_user(payload: UserLogin, request: Request, db: Session = Depends(get_d
             detail="Account is inactive. Please contact support.",
         )
 
-    token = create_access_token(
-        data={"sub": user.id, "email": user.email, "role": user.role}
-    )
+    token = issue_session(db, user)
+    response.set_cookie("caregap_session", token, httponly=True,
+                        secure=settings.COOKIE_SECURE, samesite="strict", path="/",
+                        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
     audit_service.log_event(
         db=db,
@@ -128,6 +140,16 @@ def login_user(payload: UserLogin, request: Request, db: Session = Depends(get_d
         full_name=user.full_name,
         email=user.email,
     )
+
+
+@router.post("/logout", status_code=204)
+def logout(request: Request, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    token = session_token(request)
+    payload = decode_access_token(token)
+    session = db.get(AuthSession, payload["jti"])
+    session.revoked_at = utc_now()
+    audit_service.log_event(db, AuditAction.LOGOUT, "auth", actor_id=user.id)
+    response.delete_cookie("caregap_session", path="/", secure=settings.COOKIE_SECURE, httponly=True, samesite="strict")
 
 
 @router.get("/me")

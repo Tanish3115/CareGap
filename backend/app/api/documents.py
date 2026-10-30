@@ -1,284 +1,121 @@
-from datetime import datetime, date
-from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request
+from datetime import date
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
 from app.core.errors import PermissionDeniedException, ResourceNotFoundException
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.models.patient import Patient
-from app.models.doctor import Doctor
-from app.models.document import MedicalDocument, DocumentType, DocumentStatus
-from app.models.consent import ConsentGrant
+from app.models.document import MedicalDocument, DocumentType
 from app.models.audit import AuditAction
 from app.schemas.document import DocumentResponse, DocumentUploadResponse
 from app.services.storage_service import storage_service
 from app.services.audit_service import audit_service
+from app.services.authorization import permitted_types, require_document_access, document_filter
 
 router = APIRouter(prefix="/documents", tags=["Medical Documents"])
 
 
-def _verify_document_access(
-    user: User,
-    doc: MedicalDocument,
-    db: Session,
-    request: Request,
-) -> bool:
-    """
-    Enforce patient ownership, active doctor consent grant, or admin role.
-    Raises PermissionDeniedException if access is not authorized.
-    """
-    client_ip = request.client.host if request.client else None
-
-    # 1. Admin has supervisory access (audited)
-    if user.role == UserRole.ADMIN.value:
-        return True
-
-    # 2. Patient who owns the document
-    if user.role == UserRole.PATIENT.value:
+def target_patient(db, user, supplied_id):
+    if user.role == "patient":
         patient = db.query(Patient).filter(Patient.user_id == user.id).first()
-        if patient and patient.id == doc.patient_id:
-            return True
-
-    # 3. Doctor access requires an active, unrevoked consent grant from this patient
-    if user.role == UserRole.DOCTOR.value:
-        doctor = db.query(Doctor).filter(Doctor.user_id == user.id).first()
-        if doctor:
-            now = datetime.utcnow()
-            active_grant = (
-                db.query(ConsentGrant)
-                .filter(
-                    ConsentGrant.patient_id == doc.patient_id,
-                    ConsentGrant.doctor_id == doctor.id,
-                    ConsentGrant.is_revoked == False,
-                    ConsentGrant.valid_from <= now,
-                    ConsentGrant.valid_until >= now,
-                )
-                .first()
-            )
-            if active_grant:
-                # Scoped checks: if grant is for labs only and doc is prescription, deny
-                if active_grant.scope == "labs_only" and doc.document_type != DocumentType.LAB_REPORT.value:
-                    pass
-                elif active_grant.scope == "prescriptions_only" and doc.document_type != DocumentType.PRESCRIPTION.value:
-                    pass
-                else:
-                    return True
-
-    # Log unauthorized attempt
-    audit_service.log_event(
-        db=db,
-        action=AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT,
-        resource_type="document",
-        actor_id=user.id,
-        patient_id=doc.patient_id,
-        resource_id=doc.id,
-        ip_address=client_ip,
-        details=f"Unauthorized access attempt to document {doc.id} by user {user.id}",
-    )
-    raise PermissionDeniedException("You are not authorized to view or download this patient's medical document.")
+        if not patient or (supplied_id and str(supplied_id) != patient.id):
+            raise PermissionDeniedException("Cannot upload to another patient's record")
+        return patient.id
+    if not supplied_id:
+        raise HTTPException(400, "patient_id is required for doctor uploads")
+    return str(supplied_id)
 
 
-@router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/upload", response_model=DocumentUploadResponse, status_code=201)
 async def upload_document(
-    request: Request,
-    file: UploadFile = File(...),
-    title: str = Form(...),
-    document_type: str = Form(DocumentType.OTHER.value),
-    clinical_date: Optional[str] = Form(None),
-    patient_id: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    request: Request, file: UploadFile = File(...),
+    title: str = Form(..., min_length=1, max_length=255),
+    document_type: DocumentType = Form(DocumentType.OTHER),
+    clinical_date: date | None = Form(None), patient_id: UUID | None = Form(None),
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
-    """
-    Securely upload a medical record (Prescription, Lab Report, Discharge Summary, Scan).
-    Hashed with SHA-256 and stored in an isolated vault.
-    """
-    client_ip = request.client.host if request.client else None
-
-    # Determine target patient
-    target_patient_id: str
-    if current_user.role == UserRole.PATIENT.value:
-        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
-        if not patient:
-            raise PermissionDeniedException("No patient profile associated with this account")
-        target_patient_id = patient.id
-    else:
-        # Doctor or Admin uploading on behalf of a patient
-        if not patient_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="patient_id is required when uploading as doctor or admin",
-            )
-        target_patient_id = patient_id
-
-    # Parse clinical date if supplied
-    parsed_date: Optional[date] = None
-    if clinical_date:
-        try:
-            parsed_date = datetime.strptime(clinical_date, "%Y-%m-%d").date()
-        except ValueError:
-            parsed_date = None
-
-    # Persist file securely
-    rel_path, orig_filename, file_size, sha256_hash = await storage_service.save_patient_document(
-        patient_id=target_patient_id,
-        file=file,
-    )
-
-    doc = MedicalDocument(
-        patient_id=target_patient_id,
-        uploader_id=current_user.id,
-        title=title,
-        document_type=document_type,
-        file_path=rel_path,
-        file_name=orig_filename,
-        file_size=file_size,
-        mime_type=file.content_type or "application/octet-stream",
-        sha256_hash=sha256_hash,
-        status=DocumentStatus.UPLOADED.value,
-        clinical_date=parsed_date,
-    )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
-
-    audit_service.log_event(
-        db=db,
-        action=AuditAction.UPLOAD_DOCUMENT,
-        resource_type="document",
-        actor_id=current_user.id,
-        patient_id=target_patient_id,
-        resource_id=doc.id,
-        ip_address=client_ip,
-        details=f"Document uploaded: {orig_filename} ({file_size} bytes, type: {document_type})",
-    )
-
-    return DocumentUploadResponse(
-        message="Medical document securely stored and registered",
-        document=DocumentResponse.model_validate(doc),
-    )
+    title = title.strip()
+    if not title:
+        raise HTTPException(422, "Title cannot be blank")
+    target = target_patient(db, current_user, patient_id)
+    allowed = permitted_types(db, current_user, target, request, action="upload")
+    if document_type.value not in allowed:
+        raise PermissionDeniedException("Upload is outside the authorized document scope")
+    if not db.get(Patient, target):
+        raise ResourceNotFoundException("Patient")
+    path, filename, size, checksum = await storage_service.save_patient_document(target, file)
+    doc = MedicalDocument(patient_id=target, uploader_id=current_user.id, title=title,
+                          document_type=document_type.value, file_path=path, file_name=filename,
+                          file_size=size, mime_type=storage_service.mime_for(filename),
+                          sha256_hash=checksum, status="uploaded", clinical_date=clinical_date)
+    try:
+        db.add(doc)
+        db.flush()
+        audit_service.log_event(db, AuditAction.UPLOAD_DOCUMENT, "document", actor_id=current_user.id,
+                                patient_id=target, resource_id=doc.id, commit=False)
+        db.commit()
+        db.refresh(doc)
+    except Exception:
+        db.rollback()
+        storage_service.delete_file(path)
+        raise
+    return DocumentUploadResponse(message="Medical document securely stored and registered",
+                                  document=DocumentResponse.model_validate(doc))
 
 
 @router.get("", response_model=list[DocumentResponse])
-def list_documents(
-    request: Request,
-    patient_id: Optional[str] = None,
-    document_type: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    List medical documents.
-    Patients can only see their own records.
-    Doctors must specify a patient_id and have active patient consent.
-    """
-    query = db.query(MedicalDocument)
-
-    if current_user.role == UserRole.PATIENT.value:
-        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
-        if not patient:
-            return []
-        query = query.filter(MedicalDocument.patient_id == patient.id)
-    elif current_user.role == UserRole.DOCTOR.value:
-        if not patient_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="patient_id parameter is required for doctor record retrieval",
-            )
-        # Check active consent
-        doctor = db.query(Doctor).filter(Doctor.user_id == current_user.id).first()
-        if not doctor:
-            raise PermissionDeniedException("Doctor profile missing")
-        now = datetime.utcnow()
-        active_grant = (
-            db.query(ConsentGrant)
-            .filter(
-                ConsentGrant.patient_id == patient_id,
-                ConsentGrant.doctor_id == doctor.id,
-                ConsentGrant.is_revoked == False,
-                ConsentGrant.valid_from <= now,
-                ConsentGrant.valid_until >= now,
-            )
-            .first()
-        )
-        if not active_grant:
-            raise PermissionDeniedException("No active consent grant found for this patient")
-        query = query.filter(MedicalDocument.patient_id == patient_id)
-        if active_grant.scope == "prescriptions_only":
-            query = query.filter(MedicalDocument.document_type == DocumentType.PRESCRIPTION.value)
-        elif active_grant.scope == "labs_only":
-            query = query.filter(MedicalDocument.document_type == DocumentType.LAB_REPORT.value)
-    elif current_user.role == UserRole.ADMIN.value:
-        if patient_id:
-            query = query.filter(MedicalDocument.patient_id == patient_id)
-
+def list_documents(request: Request, patient_id: UUID | None = None, document_type: DocumentType | None = None,
+                   limit: int = 100, offset: int = 0,
+                   current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not 1 <= limit <= 200 or offset < 0:
+        raise HTTPException(422, "Invalid pagination")
+    if current_user.role == "patient":
+        profile = current_user.patient_profile
+        if not profile:
+            raise PermissionDeniedException("Patient profile missing")
+        if patient_id and str(patient_id) != profile.id:
+            raise PermissionDeniedException("Cannot list another patient's records")
+        target = profile.id
+    elif patient_id:
+        target = str(patient_id)
+    else:
+        raise PermissionDeniedException("Patient authorization required")
+    allowed = permitted_types(db, current_user, target, request)
+    query = db.query(MedicalDocument).filter(MedicalDocument.patient_id == target,
+                                            MedicalDocument.document_type.in_(allowed),
+                                            document_filter(db, current_user, target))
     if document_type:
-        query = query.filter(MedicalDocument.document_type == document_type)
+        query = query.filter(MedicalDocument.document_type == document_type.value)
+    docs = query.order_by(MedicalDocument.created_at.desc(), MedicalDocument.id).offset(offset).limit(limit).all()
+    audit_service.log_event(db, AuditAction.VIEW_RECORD, "document_list", actor_id=current_user.id, patient_id=target)
+    return docs
 
-    docs = query.order_by(MedicalDocument.created_at.desc()).all()
-    return [DocumentResponse.model_validate(d) for d in docs]
+
+def authorized_document(db, user, document_id, request):
+    doc = db.get(MedicalDocument, str(document_id))
+    if not doc:
+        raise ResourceNotFoundException("Medical Document")
+    require_document_access(db, user, doc, request)
+    return doc
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document_metadata(
-    document_id: str,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Retrieve metadata for a specific document with authorization enforcement."""
-    doc = db.query(MedicalDocument).filter(MedicalDocument.id == document_id).first()
-    if not doc:
-        raise ResourceNotFoundException("Medical Document")
-
-    _verify_document_access(current_user, doc, db, request)
-
-    client_ip = request.client.host if request.client else None
-    audit_service.log_event(
-        db=db,
-        action=AuditAction.VIEW_RECORD,
-        resource_type="document",
-        actor_id=current_user.id,
-        patient_id=doc.patient_id,
-        resource_id=doc.id,
-        ip_address=client_ip,
-        details=f"Viewed metadata for document: {doc.title}",
-    )
-
-    return DocumentResponse.model_validate(doc)
+def get_document_metadata(document_id: UUID, request: Request,
+                          current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    doc = authorized_document(db, current_user, document_id, request)
+    audit_service.log_event(db, AuditAction.VIEW_RECORD, "document", actor_id=current_user.id,
+                            patient_id=doc.patient_id, resource_id=doc.id)
+    return doc
 
 
 @router.get("/{document_id}/download")
-def download_document(
-    document_id: str,
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Download/stream the verified binary file for an authorized user."""
-    doc = db.query(MedicalDocument).filter(MedicalDocument.id == document_id).first()
-    if not doc:
-        raise ResourceNotFoundException("Medical Document")
-
-    _verify_document_access(current_user, doc, db, request)
-
-    file_path = storage_service.get_secure_file_path(doc.file_path)
-
-    client_ip = request.client.host if request.client else None
-    audit_service.log_event(
-        db=db,
-        action=AuditAction.DOWNLOAD_DOCUMENT,
-        resource_type="document",
-        actor_id=current_user.id,
-        patient_id=doc.patient_id,
-        resource_id=doc.id,
-        ip_address=client_ip,
-        details=f"Downloaded file: {doc.file_name}",
-    )
-
-    return FileResponse(
-        path=str(file_path),
-        filename=doc.file_name,
-        media_type=doc.mime_type,
-    )
+def download_document(document_id: UUID, request: Request,
+                      current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    doc = authorized_document(db, current_user, document_id, request)
+    path = storage_service.get_secure_file_path(doc.file_path, doc.sha256_hash)
+    audit_service.log_event(db, AuditAction.DOWNLOAD_DOCUMENT, "document", actor_id=current_user.id,
+                            patient_id=doc.patient_id, resource_id=doc.id)
+    return FileResponse(path, filename=doc.file_name, media_type=doc.mime_type,
+                         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})

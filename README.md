@@ -1,122 +1,97 @@
 # CareGap 360
 
-**CareGap 360** is an early implementation of a patient-controlled health-record platform. Current code provides registration/login, patient profile endpoints, and a document upload/list/download workflow. Medication intelligence, predictive care continuity, operational consent management and interoperability are planned capabilities.
+Patient-controlled medical documents and care-continuity foundations. This development release implements the first vertical slice from the master prompt plus a patient consent and professional verification workflow. Use synthetic data only until the required clinical, privacy, security and operational reviews are completed.
 
-**Review status (30 October 2026):** Critical authorization defects remain. This repository is not ready for real patient data or deployment. See the [master prompt comparison and prioritized findings](docs/PROJECT_REVIEW.md), [implementation-grounded architecture](docs/ARCHITECTURE.md), and [roadmap and progress](docs/ROADMAP.md).
+## Working functionality
 
----
+- Patient and pending-doctor registration; bcrypt passwords; expiring JWT sessions with server-side revocation.
+- Browser authentication using HttpOnly, SameSite cookies. Credentials are not stored in localStorage.
+- Patient profile viewing/editing, including date of birth and clearing optional fields.
+- PDF/JPG/PNG uploads with actual content validation, size limits, source metadata and SHA-256 checks on download.
+- Patient-owned record library with search, category filters, authenticated downloads and explicit unverified status.
+- Verified doctor access requests with purpose, duration, document category and optional upload permission.
+- Patient approval/denial, optional selected-document sharing, grant expiration and revocation.
+- Doctor workspace listing only authorized patients and records; uploads only with explicit permission.
+- Administrator professional verification queue and operational audit metadata. Administrators have no automatic clinical-record access, and public registration cannot create administrators.
+- Patient-visible audit history, bounded requests, authentication throttling and deny-by-default authorization.
+- Alembic migrations, isolated backend tests, PostgreSQL regression checks, Playwright browser tests and a CI workflow.
 
-## Architecture Overview
+OCR/extraction, structured clinical encounters and medication records, reconciliation, predictive models, intervention evaluation, messaging, FHIR/ABDM and organization isolation are not implemented. Local storage is not application-encrypted or an S3 integration. See [progress](docs/PROGRESS.md), [architecture](docs/ARCHITECTURE.md) and [roadmap](docs/ROADMAP.md).
 
-CareGap 360 starts with a modular monolith structure. FHIR mappings and the full healthcare authorization model are not implemented:
+## Docker development setup
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, Lucide icons, responsive accessible healthcare UI.
-- **Backend**: FastAPI, Pydantic v2, SQLAlchemy 2.0, JWT authentication with bcrypt password hashing.
-- **Data Persistence**: PostgreSQL (production/Docker) & SQLite (zero-friction local development & automated test isolation).
-- **Document storage**: Local filesystem persistence with an upload SHA-256 checksum. Retrieval integrity verification, application encryption and private object storage are not implemented.
-- **Consent foundation**: A time-limited, document-type-scoped `ConsentGrant` model and partial read checks. Patient approval/revocation APIs and UI are absent; authorization defects are documented in the review.
-- **Audit service**: Database audit rows for selected actions. Complete coverage and tamper-resistant storage are not implemented.
+Prerequisites: Docker Desktop. Generate configuration with Python 3.12 (this workspace also has a restored `backend/.venv/Scripts/python.exe`):
 
----
-
-## Directory Structure
-
-```
-CareGap/
-├── README.md                 # Project documentation & execution guide
-├── docker-compose.yml        # Multi-container orchestration (PostgreSQL, Backend, Frontend)
-├── .env.example              # Environment variables template
-├── .gitignore                # Source control ignore rules
-├── backend/                  # FastAPI backend service
-│   ├── requirements.txt      # Python dependencies
-│   ├── Dockerfile            # Container build spec
-│   ├── app/
-│   │   ├── main.py           # Application entrypoint & CORS setup
-│   │   ├── config.py         # Application settings
-│   │   ├── database.py       # SQLAlchemy engine & session maker
-│   │   ├── models/           # User, Patient, Doctor, Document, Consent, Audit models
-│   │   ├── schemas/          # Pydantic v2 validation schemas
-│   │   ├── api/              # Auth, Documents, and Patients endpoints
-│   │   ├── services/         # Storage and Audit services
-│   │   └── core/             # Security (bcrypt, JWT) and error definitions
-│   ├── storage/documents/    # Secure document vault
-│   └── tests/                # Automated pytest suite (Unit, Integration & Security)
-└── frontend/                 # Next.js 14 frontend service
-    ├── package.json          # Node dependencies
-    ├── Dockerfile            # Multi-stage production container
-    └── src/
-        ├── app/              # Next.js App Router (Landing, Login, Register, Dashboard)
-        ├── components/       # Navbar, DocumentCard, StatsCard, DocumentUploadModal
-        ├── lib/              # API client, Auth session manager, Utilities
-        └── types/            # TypeScript domain interfaces
+```powershell
+backend/.venv/Scripts/python.exe scripts/configure.py
+docker compose up --build -d
 ```
 
----
+On a fresh checkout, use an installed Python 3.12 interpreter to run `scripts/configure.py`, or create root `.env` from `.env.example` with independent random, URL-safe secrets. The configuration script never overwrites existing files or prints secrets.
 
-## Getting Started
+- Application: http://localhost:3300
+- API documentation: http://localhost:8001/docs
+- Backend readiness: http://localhost:8001/ready
+- PostgreSQL: `127.0.0.1:55432`
 
-These are intended setup commands, not a currently verified clean-install procedure. The checked-in workspace's existing `backend/venv` points to a missing Python installation and must be recreated with a working interpreter. Docker setup also has unresolved driver/build/API-address issues listed in the review. Use synthetic data only.
+Ports are configurable through `FRONTEND_PORT`, `BACKEND_PORT` and `POSTGRES_PORT` in root `.env`. These defaults avoid the older development servers already present in this workspace. PostgreSQL and uploaded documents persist in Docker volumes. Startup applies migrations; successful readiness is required before starting the frontend.
 
-### Option A: Local Development (Quickstart)
+There are no default production credentials. Create a patient or doctor through registration. Provision an administrator explicitly:
 
-#### 1. Backend Setup
-```bash
-# From repository root
+```powershell
+docker compose exec backend python -m app.cli create-admin --email admin@example.com --name "Platform Administrator"
+```
+
+The command asks for a password without displaying it. A doctor remains pending until an administrator records a verification decision and evidence reference. A recorded administrator decision is not a live medical-license registry integration.
+
+## Local development without Docker
+
+With Python 3.12 and Node.js 22 installed:
+
+```powershell
+python -m venv backend/.venv
+backend/.venv/Scripts/python.exe -m pip install --require-hashes -r backend/requirements.lock.txt
+backend/.venv/Scripts/python.exe scripts/configure.py
 cd backend
-python -m venv venv
-
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# Linux/macOS:
-# source venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+.venv/Scripts/python.exe -m alembic upgrade head
+.venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000
 ```
-The FastAPI interactive documentation is accessible at: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-#### 2. Frontend Setup
-```bash
-# In a separate terminal, from repository root
+In another terminal:
+
+```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
+Open http://localhost:3000. Browser API calls use the same-origin `/api/v1` proxy. `API_PROXY_TARGET` configures its backend target (default `http://127.0.0.1:8000`). Public browser environment variables are not used for internal Docker hostnames.
 
-### Option B: Docker Compose
+**Existing database:** the original workspace SQLite database has not been modified. If local startup reports an existing unversioned schema, stop the old backend and run `backend/.venv/Scripts/python.exe scripts/adopt_legacy_sqlite.py` from the repository root. This checks for the original six-table column layout, backs it up and migrates it. It refuses unknown layouts. Review the [operations guide](docs/OPERATIONS.md) first; never delete an existing database to make startup pass.
 
-Ensure Docker Desktop is running, then run:
+## Verification
 
-```bash
-docker compose up --build
-```
-
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend API: [http://localhost:8000](http://localhost:8000)
-- Interactive API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- PostgreSQL Database: `localhost:5432`
-
----
-
-## Automated Testing & Security Verification
-
-The repository contains 15 backend test functions covering:
-- Patient and clinician registration & authentication.
-- Login with correct/incorrect credentials and authenticated profile retrieval.
-- Basic PDF upload/download, checksum presence and rejection of a disallowed extension.
-- Cross-patient unauthorized access rejection (HTTP 403 Forbidden).
-- Zero-trust clinician consent verification (access denied without active patient grant).
-- Consent revocation blocking future access.
-
-After correcting test engine/storage isolation described in the review, run the test suite in a synthetic-only environment:
-```bash
+```powershell
 cd backend
-$env:PYTHONPATH="."
-.\venv\Scripts\pytest tests -v
+.venv/Scripts/python.exe -m pytest -q
+cd ../frontend
+npm run lint
+npm run typecheck
+npm run build
+npm exec playwright install chromium
+npm run test:e2e
 ```
 
-The test session uses an in-memory database, but startup still touches the configured application engine and the storage fixture does not redirect the initialized storage singleton. Backend tests could not run during the 30 October 2026 review because the virtual environment references a missing interpreter. Frontend TypeScript checking and the production build passed (the build emitted cache snapshot warnings). Do not interpret the existence of tests as proof of clinical safety, production readiness or complete authorization coverage.
+Browser tests create disposable synthetic databases, documents and test-only users on ports 3100/8100. On Windows, process permissions must allow starting/stopping Chromium and its server process trees. They do not use the workspace database or Docker application users.
 
+With the Compose PostgreSQL service running, from the repository root:
+
+```powershell
+backend/.venv/Scripts/python.exe scripts/check_postgres.py
+```
+
+This creates a uniquely named temporary PostgreSQL database, checks migrations against model metadata, runs the API suite and drops only that generated test database. `CAREGAP_POSTGRES_URL` can supply a dedicated test server instead. Tests must never target real clinical data.
+
+Build artifacts for the browser suite use `.next-e2e`; the regular app uses `.next`. Set `NEXT_DIST_DIR=.next-build` for an isolated production build while another development server is running.
+
+API contracts are available in FastAPI's `/docs` and `/openapi.json`. Authorization checks are centralized in `backend/app/services/authorization.py`. See [operations and remaining deployment requirements](docs/OPERATIONS.md).

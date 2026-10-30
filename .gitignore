@@ -2,6 +2,9 @@
 .tools/
 .venv/
 *.tsbuildinfo
+frontend/next-env.d.ts
+backend/wheelhouse/*
+!backend/wheelhouse/.gitkeep
 playwright-report/
 test-results/
 node_modules/
@@ -10,6 +13,7 @@ backend/venv/
 
 # Next.js Build Outputs
 .next/
+.next-*/
 frontend/.next/
 out/
 build/
@@ -30,6 +34,7 @@ caregap360.db
 backend/caregap360.db
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
+backend/storage/backups/
 
 # Environment variables
 .env

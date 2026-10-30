@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
 import { clearAuthSession } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 interface NavbarProps {
   user?: {
@@ -17,9 +18,14 @@ interface NavbarProps {
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
 
-  const handleLogout = () => {
-    clearAuthSession();
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout();
+      clearAuthSession();
+      router.push("/login");
+    } catch {
+      window.alert("Sign out failed. Please try again.");
+    }
   };
 
   return (

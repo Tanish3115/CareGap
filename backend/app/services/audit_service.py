@@ -14,6 +14,7 @@ class AuditService:
         resource_id: Optional[str] = None,
         ip_address: Optional[str] = None,
         details: Optional[str] = None,
+        commit: bool = True,
     ) -> AuditLog:
         """Create an immutable audit log record for security, access compliance and traceability."""
         act_val = action.value if isinstance(action, AuditAction) else str(action)
@@ -27,8 +28,11 @@ class AuditService:
             details=details,
         )
         db.add(audit_entry)
-        db.commit()
-        db.refresh(audit_entry)
+        if commit:
+            db.commit()
+            db.refresh(audit_entry)
+        else:
+            db.flush()
         return audit_entry
 
 

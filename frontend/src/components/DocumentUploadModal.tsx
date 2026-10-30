@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { X, UploadCloud, FileCheck, AlertCircle, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { DocumentType, MedicalDocument } from "@/types";
@@ -9,12 +9,16 @@ interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: (newDoc: MedicalDocument) => void;
+  patientId?: string;
+  allowedTypes?: DocumentType[];
 }
 
 export function DocumentUploadModal({
   isOpen,
   onClose,
   onUploadSuccess,
+  patientId,
+  allowedTypes,
 }: DocumentUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -22,6 +26,25 @@ export function DocumentUploadModal({
   const [clinicalDate, setClinicalDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (allowedTypes?.length) setDocumentType(allowedTypes[0]);
+    const previous = document.activeElement as HTMLElement | null;
+    modalRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !loading) onClose();
+      if (event.key !== "Tab") return;
+      const elements = modalRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not([type="file"]), select');
+      if (!elements?.length) return;
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => { document.removeEventListener("keydown", handler); previous?.focus(); };
+  }, [isOpen, loading, onClose, allowedTypes]);
 
   if (!isOpen) return null;
 
@@ -31,6 +54,11 @@ export function DocumentUploadModal({
       setFile(selected);
       if (!title) {
         setTitle(selected.name.replace(/\.[^/.]+$/, ""));
+      }
+      if (selected.size > 25 * 1024 * 1024) {
+        setError("File exceeds the 25MB limit.");
+        setFile(null);
+        return;
       }
       setError(null);
     }
@@ -55,12 +83,14 @@ export function DocumentUploadModal({
       formData.append("file", file);
       formData.append("title", title.trim());
       formData.append("document_type", documentType);
+      if (patientId) formData.append("patient_id", patientId);
       if (clinicalDate) {
         formData.append("clinical_date", clinicalDate);
       }
 
       const res = await api.documents.upload(formData);
       onUploadSuccess(res.document);
+      setFile(null); setTitle(""); setClinicalDate("");
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to upload document. Please verify the file format and try again.");
@@ -70,9 +100,11 @@ export function DocumentUploadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+    <div role="dialog" aria-modal="true" aria-label="Upload Medical Document" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+      <div ref={modalRef} className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
         <button
+          aria-label="Close upload"
+          disabled={loading}
           onClick={onClose}
           className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
         >
@@ -86,7 +118,7 @@ export function DocumentUploadModal({
           <div>
             <h3 className="text-lg font-bold text-slate-900">Upload Medical Document</h3>
             <p className="text-xs text-slate-500">
-              Files are encrypted, integrity-checked with SHA-256, and stored securely.
+              PDF and image content is validated. Downloads check the stored SHA-256 checksum.
             </p>
           </div>
         </div>
@@ -145,6 +177,7 @@ export function DocumentUploadModal({
             </label>
             <input
               type="text"
+              aria-label="Document Title"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -159,16 +192,12 @@ export function DocumentUploadModal({
                 Document Type
               </label>
               <select
+                aria-label="Document Type"
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value as DocumentType)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white"
               >
-                <option value="prescription">Prescription</option>
-                <option value="lab_report">Lab Report</option>
-                <option value="discharge_summary">Discharge Summary</option>
-                <option value="referral">Referral Letter</option>
-                <option value="scan">Scan / Imaging</option>
-                <option value="other">Other Document</option>
+                {(allowedTypes || ["prescription", "lab_report", "discharge_summary", "referral", "scan", "other"]).map(type => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}
               </select>
             </div>
 
@@ -178,6 +207,7 @@ export function DocumentUploadModal({
               </label>
               <input
                 type="date"
+                aria-label="Clinical Date"
                 value={clinicalDate}
                 onChange={(e) => setClinicalDate(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"

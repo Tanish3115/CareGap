@@ -60,7 +60,7 @@ export interface PatientStats {
   total_documents: number;
   prescriptions_count: number;
   lab_reports_count: number;
-  pending_care_gaps: number;
+  pending_care_gaps: number | null;
   active_doctor_grants: number;
 }
 

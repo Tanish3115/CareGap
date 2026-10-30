@@ -20,7 +20,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { api } from "@/lib/api";
-import { getAuthToken, getCachedUser } from "@/lib/auth";
+import { CareWorkspace } from "@/components/CareWorkspace";
 import { MedicalDocument, PatientProfile, PatientStats } from "@/types";
 
 export default function DashboardPage() {
@@ -43,21 +43,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    const cached = getCachedUser();
-    if (cached) {
-      setCurrentUser(cached);
-    }
-
-    fetchDashboardData();
-  }, [router]);
-
-  const fetchDashboardData = async () => {
+    const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -68,14 +54,8 @@ export default function DashboardPage() {
 
       if (userRes.role === "patient") {
         const [profile, summaryStats, docs] = await Promise.all([
-          api.patients.getProfile().catch(() => null),
-          api.patients.getStats().catch(() => ({
-            total_documents: 0,
-            prescriptions_count: 0,
-            lab_reports_count: 0,
-            pending_care_gaps: 0,
-            active_doctor_grants: 0,
-          })),
+          api.patients.getProfile(),
+          api.patients.getStats(),
           api.documents.list(),
         ]);
 
@@ -85,16 +65,18 @@ export default function DashboardPage() {
         setFilteredDocuments(docs);
       } else {
         // Doctor or Admin
-        const docs = await api.documents.list();
-        setDocuments(docs);
-        setFilteredDocuments(docs);
+        setDocuments([]);
+        setFilteredDocuments([]);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load dashboard data");
+      if (err.message === "Authentication required") router.replace("/login");
+      else setError(err.message || "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  };
+    };
+    void fetchDashboardData();
+  }, [router]);
 
   useEffect(() => {
     let result = documents;
@@ -140,6 +122,12 @@ export default function DashboardPage() {
     );
   }
 
+  if (error) return <div className="min-h-screen bg-slate-50"><Navbar user={currentUser} /><main className="mx-auto max-w-4xl p-8"><p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</p><button className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white" onClick={() => window.location.reload()}>Retry loading dashboard</button></main></div>;
+
+  if (currentUser && currentUser.role !== "patient") {
+    return <div className="min-h-screen bg-slate-50"><Navbar user={currentUser} /><main className="mx-auto max-w-7xl px-4 py-8"><CareWorkspace user={currentUser} /></main></div>;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar user={currentUser} />
@@ -158,7 +146,7 @@ export default function DashboardPage() {
                 </h1>
                 <span className="inline-flex items-center space-x-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
                   <ShieldCheck className="h-3 w-3" />
-                  <span>Verified Identity</span>
+                  <span>Patient account</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -202,7 +190,7 @@ export default function DashboardPage() {
           <StatsCard
             title="Total Vault Documents"
             value={stats.total_documents}
-            description="Verified longitudinal health records"
+            description="Uploaded source documents"
             icon={FileText}
             colorScheme="blue"
           />
@@ -235,7 +223,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-bold text-slate-900">Medical Document Vault</h2>
               <p className="text-xs text-slate-500">
-                Longitudinal record repository with verified provenance &amp; SHA-256 integrity
+                Original documents with upload checksums; clinical contents require review
               </p>
             </div>
 
@@ -308,6 +296,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        {currentUser && <CareWorkspace user={currentUser} />}
       </main>
 
       {/* Upload Modal */}

@@ -1,3 +1,4 @@
+from app.core.time import utc_now
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -30,5 +31,5 @@ class AuditLog(Base):
     resource_id: Mapped[str] = mapped_column(String(100), nullable=True)
     ip_address: Mapped[str] = mapped_column(String(50), nullable=True)
     details: Mapped[str] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False, index=True)
 

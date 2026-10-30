@@ -80,7 +80,7 @@ export default function RegisterPage() {
           Create Your CareGap 360 Account
         </h2>
         <p className="mt-1 text-center text-xs text-slate-500">
-          Select your role to get started with verified clinical access
+          Doctors require professional verification before requesting patient access
         </p>
       </div>
 
@@ -132,6 +132,7 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type="text"
+                  aria-label="Full Legal Name"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -152,6 +153,7 @@ export default function RegisterPage() {
                   </div>
                   <input
                     type="email"
+                    aria-label="Email Address"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -167,6 +169,7 @@ export default function RegisterPage() {
                 </label>
                 <input
                   type="tel"
+                  aria-label="Phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+1 (555) 000-0000"
@@ -177,7 +180,7 @@ export default function RegisterPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Password (min 8 characters)
+                Password (min 12 characters)
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -185,8 +188,10 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type="password"
+                  aria-label="Password"
                   required
-                  minLength={8}
+                  minLength={12}
+                  maxLength={72}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -208,6 +213,7 @@ export default function RegisterPage() {
                     </label>
                     <input
                       type="text"
+                      aria-label="Medical License Number"
                       required
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
@@ -221,6 +227,7 @@ export default function RegisterPage() {
                     </label>
                     <input
                       type="text"
+                      aria-label="Specialization"
                       required
                       value={specialization}
                       onChange={(e) => setSpecialization(e.target.value)}
@@ -235,6 +242,7 @@ export default function RegisterPage() {
                   </label>
                   <input
                     type="text"
+                    aria-label="Hospital or Clinic Affiliation"
                     value={hospitalAffiliation}
                     onChange={(e) => setHospitalAffiliation(e.target.value)}
                     placeholder="e.g. Metropolitan General Hospital"
@@ -256,6 +264,7 @@ export default function RegisterPage() {
                       Blood Group (Optional)
                     </label>
                     <select
+                      aria-label="Blood Group"
                       value={bloodGroup}
                       onChange={(e) => setBloodGroup(e.target.value)}
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none bg-white"
@@ -277,6 +286,7 @@ export default function RegisterPage() {
                     </label>
                     <input
                       type="tel"
+                      aria-label="Emergency Contact"
                       value={emergencyContact}
                       onChange={(e) => setEmergencyContact(e.target.value)}
                       placeholder="+1 (555) 999-8888"

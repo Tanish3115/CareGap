@@ -1,57 +1,52 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: caregap360_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: caregap_user
-      POSTGRES_PASSWORD: caregap_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
       POSTGRES_DB: caregap360_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U caregap_user -d caregap360_db"]
       interval: 5s
       timeout: 5s
-      retries: 5
-
+      retries: 10
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: caregap360_backend
+    build: ./backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://caregap_user:caregap_password@postgres:5432/caregap360_db
-      SECRET_KEY: dev-insecure-secret-key-change-in-production-caregap360-super-secret
+      DATABASE_URL: postgresql+psycopg://caregap_user:${POSTGRES_PASSWORD}@postgres:5432/caregap360_db
+      SECRET_KEY: ${SECRET_KEY:?Set a random SECRET_KEY in root .env}
+      ENVIRONMENT: development
       STORAGE_DIR: /app/storage/documents
-      CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+      CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3300}","http://127.0.0.1:${FRONTEND_PORT:-3300}"]'
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8001}:8000"
     volumes:
       - document_vault:/app/storage/documents
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     depends_on:
       postgres:
         condition: service_healthy
-
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: caregap360_frontend
+      args:
+        API_PROXY_TARGET: http://backend:8000
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3300}:3000"
     depends_on:
-      - backend
-
+      backend:
+        condition: service_healthy
 volumes:
   postgres_data:
   document_vault:
-

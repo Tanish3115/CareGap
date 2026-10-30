@@ -1,3 +1,4 @@
+from app.core.time import utc_now
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -21,7 +22,7 @@ class Doctor(Base):
     specialization: Mapped[str] = mapped_column(String(100), nullable=False)
     hospital_affiliation: Mapped[str] = mapped_column(String(200), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(20), default=DoctorVerificationStatus.PENDING.value, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="doctor_profile")

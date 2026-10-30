@@ -75,7 +75,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
         <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
           <div>
             <span className="font-medium text-slate-700">Clinical Date:</span>{" "}
-            {formatDate(document.clinical_date || document.created_at)}
+            {document.clinical_date ? formatDate(document.clinical_date) : "Not recorded"}
           </div>
           <div className="text-right">
             <span className="font-medium text-slate-700">Size:</span> {formatBytes(document.file_size)}
@@ -92,7 +92,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
         <span className="inline-flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-          Securely Vaulted
+          {document.status === "verified" ? "Reviewed" : "Uploaded · Unverified"}
         </span>
 
         <button

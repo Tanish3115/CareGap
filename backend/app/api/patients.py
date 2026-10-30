@@ -1,4 +1,8 @@
+from app.core.time import utc_now
 from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime
+from app.models.consent import ConsentGrant
+from app.services.audit_service import audit_service
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_patient
 from app.models.user import User
@@ -12,9 +16,11 @@ router = APIRouter(prefix="/patients", tags=["Patients"])
 @router.get("/me", response_model=PatientProfile)
 def get_my_patient_profile(
     patient_ctx: tuple[User, Patient] = Depends(get_current_patient),
+    db: Session = Depends(get_db),
 ):
     """Retrieve full longitudinal profile for the authenticated patient."""
     user, patient = patient_ctx
+    audit_service.log_event(db, "VIEW_RECORD", "patient_profile", actor_id=user.id, patient_id=patient.id)
     return PatientProfile(
         id=patient.id,
         user_id=user.id,
@@ -40,20 +46,10 @@ def update_my_patient_profile(
     """Update editable patient demographic and emergency information."""
     user, patient = patient_ctx
 
-    if payload.date_of_birth is not None:
-        patient.date_of_birth = payload.date_of_birth
-    if payload.gender is not None:
-        patient.gender = payload.gender
-    if payload.blood_group is not None:
-        patient.blood_group = payload.blood_group
-    if payload.emergency_contact is not None:
-        patient.emergency_contact = payload.emergency_contact
-    if payload.address is not None:
-        patient.address = payload.address
-    if payload.abha_id is not None:
-        patient.abha_id = payload.abha_id
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(patient, field, value)
 
-    db.commit()
+    audit_service.log_event(db, "UPDATE_PROFILE", "patient_profile", actor_id=user.id, patient_id=patient.id)
     db.refresh(patient)
 
     return PatientProfile(
@@ -102,7 +98,10 @@ def get_patient_summary_stats(
         "total_documents": total_docs,
         "prescriptions_count": prescriptions_count,
         "lab_reports_count": labs_count,
-        "pending_care_gaps": 0,
-        "active_doctor_grants": len(patient.consent_grants),
+        "pending_care_gaps": None,
+        "active_doctor_grants": db.query(ConsentGrant).filter(
+            ConsentGrant.patient_id == patient.id, ConsentGrant.is_revoked.is_(False),
+            ConsentGrant.valid_from <= utc_now(), ConsentGrant.valid_until > utc_now(),
+            ConsentGrant.scope.in_(["all", "prescriptions_only", "labs_only"])).count(),
     }
 

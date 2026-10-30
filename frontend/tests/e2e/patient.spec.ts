@@ -1,0 +1,100 @@
+import { test, expect } from "@playwright/test";
+
+function syntheticPdf() {
+  let pdf = "%PDF-1.4\n";
+  const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>"];
+  const offsets: number[] = [0];
+  objects.forEach((body, i) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${body}\nendobj\n`; });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 4\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+
+test("patient registers, uploads, downloads, logs out; another patient cannot retrieve the record", async ({ page, browser }) => {
+  const email = `synthetic-${Date.now()}@example.com`;
+  await page.goto("/register");
+  await page.getByPlaceholder("e.g. Dr. Jane Doe or Alice Johnson").fill("Synthetic Browser Patient");
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill("SyntheticBrowser123!");
+  await page.getByRole("button", { name: "Create Account" }).click();
+  await expect(page).toHaveURL(/dashboard/);
+  await expect(page.getByRole("heading", { name: "Synthetic Browser Patient" })).toBeVisible();
+  await expect(page.getByText("No medical documents found")).toBeVisible();
+  await page.getByRole("button", { name: "Upload Document", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.locator('input[type="file"]').setInputFiles({ name: "synthetic-source.pdf", mimeType: "application/pdf", buffer: syntheticPdf() });
+  await dialog.getByPlaceholder("e.g. Cardiology Visit Prescription").fill("Synthetic Browser Record");
+  await dialog.getByRole("button", { name: /Upload/ }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Synthetic Browser Record" })).toBeVisible();
+  const response = await page.request.get("/api/v1/documents");
+  expect(response.ok()).toBeTruthy();
+  const [document] = await response.json();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("synthetic-source.pdf");
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Synthetic Browser Record" })).toBeVisible();
+  const other = await browser.newContext({ baseURL: "http://127.0.0.1:3100" });
+  await other.request.post("/api/v1/auth/register", { data: { email: `other-${email}`, password: "SyntheticBrowser123!", full_name: "Synthetic Other Patient", role: "patient" } });
+  await other.request.post("/api/v1/auth/login", { data: { email: `other-${email}`, password: "SyntheticBrowser123!" } });
+  expect((await other.request.get(`/api/v1/documents/${document.id}/download`)).status()).toBe(403);
+  await other.close();
+  expect(await page.evaluate(() => localStorage.getItem("caregap_access_token"))).toBeNull();
+  const cookies = await page.context().cookies();
+  expect(cookies.find(c => c.name === "caregap_session")?.httpOnly).toBe(true);
+  await page.getByRole("button", { name: "Logout" }).click();
+  await expect(page).toHaveURL(/login/);
+  expect((await page.request.get("/api/v1/auth/me")).status()).toBe(401);
+});
+
+test("protected dashboard redirects an anonymous browser", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/login/);
+});
+
+test("verified clinician requests access; patient approves and revokes it", async ({ browser }) => {
+  const baseURL = "http://127.0.0.1:3100";
+  const patient = await browser.newContext({ baseURL });
+  const doctor = await browser.newContext({ baseURL });
+  const admin = await browser.newContext({ baseURL });
+  const stamp = Date.now();
+  const patientEmail = `consent-patient-${stamp}@example.com`;
+  const doctorEmail = `consent-doctor-${stamp}@example.com`;
+  const password = "SyntheticBrowser123!";
+  const patientResponse = await patient.request.post("/api/v1/auth/register", { data: { email: patientEmail, password, full_name: "Synthetic Consent Patient", role: "patient" } });
+  expect(patientResponse.status()).toBe(201);
+  await patient.request.post("/api/v1/auth/login", { data: { email: patientEmail, password } });
+  const me = await (await patient.request.get("/api/v1/auth/me")).json();
+  const uploaded = await patient.request.post("/api/v1/documents/upload", { multipart: { title: "Synthetic Shared Prescription", document_type: "prescription", file: { name: "synthetic.pdf", mimeType: "application/pdf", buffer: syntheticPdf() } } });
+  expect(uploaded.status()).toBe(201);
+  const doc = (await uploaded.json()).document;
+  const doctorRegistration = await doctor.request.post("/api/v1/auth/register", { data: { email: doctorEmail, password, full_name: "Synthetic Verified Clinician", role: "doctor", license_number: `SYNTHETIC-${stamp}`, specialization: "Synthetic testing" } });
+  expect(doctorRegistration.status()).toBe(201);
+  await doctor.request.post("/api/v1/auth/login", { data: { email: doctorEmail, password } });
+  const doctorMe = await (await doctor.request.get("/api/v1/auth/me")).json();
+  const clinicianPage = await doctor.newPage();
+  await clinicianPage.goto("/dashboard");
+  await expect(clinicianPage.getByRole("heading", { name: "Professional verification required" })).toBeVisible();
+  await admin.request.post("/api/v1/auth/login", { data: { email: "synthetic-admin@example.com", password: "SyntheticAdminBrowser123!" } });
+  const verified = await admin.request.post(`/api/v1/admin/doctors/${doctorMe.doctor.id}/verification`, { data: { status: "verified", evidence_reference: "Synthetic E2E verification evidence; not a real clinician" } });
+  expect(verified.status()).toBe(200);
+  await clinicianPage.reload();
+  await clinicianPage.getByLabel("Patient identifier", { exact: true }).fill(me.patient.id);
+  await clinicianPage.getByLabel("Purpose", { exact: true }).fill("Synthetic continuity review");
+  await clinicianPage.getByLabel("Record scope").selectOption("prescriptions_only");
+  await clinicianPage.getByRole("button", { name: "Send access request" }).click();
+  await expect(clinicianPage.getByRole("status")).toContainText("Access requested");
+  const patientPage = await patient.newPage();
+  await patientPage.goto("/dashboard");
+  await patientPage.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(patientPage.getByRole("status")).toContainText("Access approved");
+  await clinicianPage.reload();
+  await clinicianPage.getByLabel("Select a patient").selectOption(me.patient.id);
+  await expect(clinicianPage.getByRole("heading", { name: "Synthetic Shared Prescription" })).toBeVisible();
+  expect((await doctor.request.get(`/api/v1/documents/${doc.id}/download`)).status()).toBe(200);
+  await patientPage.getByRole("button", { name: "Revoke", exact: true }).click();
+  await expect(patientPage.getByRole("status")).toContainText("revoked");
+  expect((await doctor.request.get(`/api/v1/documents/${doc.id}/download`)).status()).toBe(403);
+  await patient.close(); await doctor.close(); await admin.close();
+});

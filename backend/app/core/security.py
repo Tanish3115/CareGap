@@ -26,7 +26,7 @@ def create_access_token(data: dict[str, Any], expires_delta: Optional[timedelta]
     """Generate a signed JWT access token using timezone-aware UTC."""
     to_encode = data.copy()
     now_utc = datetime.now(timezone.utc)
-    if expires_delta:
+    if expires_delta is not None:
         expire = now_utc + expires_delta
     else:
         expire = now_utc + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -42,6 +42,7 @@ def decode_access_token(token: str) -> Optional[dict[str, Any]]:
             token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
+            options={"require": ["exp", "iat", "sub", "jti"]},
             leeway=30,  # 30 seconds clock drift leeway
         )
         return payload

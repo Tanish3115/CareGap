@@ -1,22 +1,22 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+COPY requirements.lock.txt .
+COPY wheelhouse /tmp/wheelhouse
+RUN if find /tmp/wheelhouse -name '*.whl' | grep -q .; then \
+      pip install --no-index --find-links=/tmp/wheelhouse --require-hashes -r requirements.lock.txt; \
+    else pip install --no-cache-dir --require-hashes -r requirements.lock.txt; fi
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-COPY . .
+RUN groupadd --system caregap && useradd --system --gid caregap caregap
+COPY --chown=caregap:caregap . .
+RUN mkdir -p /app/storage/documents && chown -R caregap:caregap /app/storage
+USER caregap
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 

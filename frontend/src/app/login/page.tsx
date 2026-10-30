@@ -66,6 +66,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
+                  aria-label="Email Address"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -85,6 +86,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="password"
+                  aria-label="Password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -107,7 +109,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 border-t border-slate-100 pt-5 text-center text-xs text-slate-600">
-            Don't have an account yet?{" "}
+            Don&apos;t have an account yet?{" "}
             <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
               Register now
             </Link>
