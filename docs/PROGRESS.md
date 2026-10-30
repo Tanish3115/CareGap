@@ -20,7 +20,7 @@ Updated 30 October 2026. This supersedes the historical findings/status in `PROJ
 
 ## Verification record
 
-- Backend: 60 tests passed on SQLite and the same 60 passed on a disposable PostgreSQL database. Coverage includes active login throttling, request-size rejection, upload rollback cleanup, valid images, consent lifecycle, patient isolation, short-code collision retries and legacy migration preservation/refusal.
+- Backend: 67 tests passed on SQLite and the same 67 passed on a disposable PostgreSQL database. Coverage includes active login throttling, request-size rejection, upload rollback cleanup, valid images, consent lifecycle, patient isolation, short-code collision retries, finite ID capacity and legacy migration preservation/refusal.
 - Migrations: baseline-to-head, preservation of a synthetic existing row, downgrade/re-upgrade and comparison against model metadata passed on SQLite. PostgreSQL upgrade/model checks also passed.
 - Browser: 3 Playwright tests passed: patient registration/upload/download/reload/logout/cross-patient denial; anonymous dashboard redirect; verified doctor request/patient approval/access/revocation.
 - Frontend: ESLint, TypeScript and an isolated Next.js production build passed. Docker frontend image also built with all application routes.
@@ -32,7 +32,7 @@ The existing SQLite database still has its original modification time and size; 
 
 ## Partial and unimplemented requirements
 
-Patient ID usability update: patients now share a short ID such as `CG-48273184`, and the clinician input displays that example. Migration `0003` assigns codes to existing patients without changing UUIDs or linked documents. Consent requests accept the short code and continue accepting existing UUIDs. Three browser tests passed with the short-code consent workflow; lint, type checking and the application build passed. The running Docker database was backed up before migration; post-update checks found no invalid patient codes or orphaned documents, and application/readiness checks passed.
+Patient ID usability update: patients now share an ID such as `A123` (one uppercase letter and three digits), and the clinician input displays that example. Migration `0004` converts existing sharing codes without changing UUIDs or linked documents. Unique allocation retries collisions and scans free slots; all 26,000 occupied slots produce a controlled registration error without creating a partial account. Oversized legacy databases are rejected before migration changes any IDs. Consent requests also continue accepting existing UUIDs through the API. The database was backed up before the live update; migration, code-format checks, document-link checks, application and readiness checks passed. All three browser tests passed after precompiling development pages to remove cold-compilation timing from user-action assertions; their authorization assertions were retained.
 
 The current milestone covers the master prompt's first working vertical slice and a functional document-sharing workflow. It is not the complete nine-phase product.
 

@@ -23,7 +23,7 @@ router = APIRouter(prefix="/consent", tags=["Patient consent"])
 
 
 class AccessRequestIn(BaseModel):
-    patient_id: UUID | Annotated[str, Field(pattern=r"^CG-[1-9][0-9]{7}$")]
+    patient_id: UUID | Annotated[str, Field(pattern=r"^[A-Z][0-9]{3}$")]
     scope: Literal["all", "prescriptions_only", "labs_only"]
     purpose: str = Field(min_length=5, max_length=255)
     duration_hours: int = Field(default=24, ge=1, le=720)

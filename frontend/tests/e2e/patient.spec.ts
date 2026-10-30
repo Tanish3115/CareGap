@@ -1,5 +1,13 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeAll(async ({ request }) => {
+  // Compile development routes before timing user actions; production serves built routes.
+  for (const route of ["/register", "/dashboard", "/login"]) {
+    const response = await request.get(route);
+    expect(response.status()).toBe(200);
+  }
+});
+
 function syntheticPdf() {
   let pdf = "%PDF-1.4\n";
   const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>"];
@@ -80,7 +88,7 @@ test("verified clinician requests access; patient approves and revokes it", asyn
   const verified = await admin.request.post(`/api/v1/admin/doctors/${doctorMe.doctor.id}/verification`, { data: { status: "verified", evidence_reference: "Synthetic E2E verification evidence; not a real clinician" } });
   expect(verified.status()).toBe(200);
   await clinicianPage.reload();
-  await expect(clinicianPage.getByPlaceholder("e.g. CG-48273184")).toBeVisible();
+  await expect(clinicianPage.getByPlaceholder("e.g. A123")).toBeVisible();
   await clinicianPage.getByLabel("Patient ID", { exact: true }).fill(me.patient.patient_code);
   await clinicianPage.getByLabel("Purpose", { exact: true }).fill("Synthetic continuity review");
   await clinicianPage.getByLabel("Record scope").selectOption("prescriptions_only");

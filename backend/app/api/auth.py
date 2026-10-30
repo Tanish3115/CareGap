@@ -48,13 +48,17 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
 
     # Create specific role profile
     if payload.role == UserRole.PATIENT.value:
-        patient_profile = create_patient_profile(db,
-            user_id=new_user.id,
-            date_of_birth=payload.date_of_birth,
-            gender=payload.gender,
-            blood_group=payload.blood_group,
-            emergency_contact=payload.emergency_contact,
-        )
+        try:
+            create_patient_profile(db,
+                user_id=new_user.id,
+                date_of_birth=payload.date_of_birth,
+                gender=payload.gender,
+                blood_group=payload.blood_group,
+                emergency_contact=payload.emergency_contact,
+            )
+        except HTTPException:
+            db.rollback()
+            raise
     elif payload.role == UserRole.DOCTOR.value:
         if not payload.license_number or not payload.specialization:
             raise HTTPException(

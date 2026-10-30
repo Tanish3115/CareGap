@@ -96,6 +96,7 @@ def patient_user(db_session):
 
     patient = Patient(
         user_id=user.id,
+        patient_code="A001",
         gender="female",
         blood_group="O+",
         emergency_contact="+1987654321",
@@ -120,6 +121,7 @@ def second_patient_user(db_session):
 
     patient = Patient(
         user_id=user.id,
+        patient_code="A002",
         gender="male",
         blood_group="A+",
     )

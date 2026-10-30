@@ -10,7 +10,7 @@ Patient-controlled medical documents and care-continuity foundations. This devel
 - PDF/JPG/PNG uploads with actual content validation, size limits, source metadata and SHA-256 checks on download.
 - Patient-owned record library with search, category filters, authenticated downloads and explicit unverified status.
 - Verified doctor access requests with purpose, duration, document category and optional upload permission.
-- Simple patient sharing IDs such as `CG-48273184`, displayed on the patient dashboard and accepted in the doctor's access-request field. The field shows an example; existing UUIDs remain internal and continue to work through the API.
+- Simple patient sharing IDs such as `A123` (one uppercase letter and three digits), displayed on the patient dashboard and accepted in the doctor's access-request field. The field shows an example; existing UUIDs remain internal and continue to work through the API. This format provides 26,000 unique IDs, from `A000` through `Z999`.
 - Patient approval/denial, optional selected-document sharing, grant expiration and revocation.
 - Doctor workspace listing only authorized patients and records; uploads only with explicit permission.
 - Administrator professional verification queue and operational audit metadata. Administrators have no automatic clinical-record access, and public registration cannot create administrators.
