@@ -13,6 +13,9 @@ flowchart LR
     A --> Auth[Auth routes\nbcrypt + revocable JWT sessions]
     A --> P[Patient profile routes]
     A --> D[Document routes\nshared authorization policy]
+    A --> C[Consultations / timeline / follow-ups\nexplicit clinical consent]
+    C --> DB
+    C --> Audit
     A --> Consent[Access requests / grants / revocation]
     A --> Admin[Professional verification\noperational metadata only]
     Consent --> DB
@@ -34,15 +37,15 @@ PostgreSQL migrations and API regression have been exercised against a dedicated
 | --- | --- |
 | `frontend/src/app` | Landing, registration, login and shared dashboard routes. |
 | `frontend/src/lib` | Same-origin fetch client, credential cleanup helpers and formatting; tokens are not persisted in browser storage. |
-| `frontend/src/components` | Navigation, document cards, stats and upload form. |
-| `backend/app/api` | Auth/session, patient profile, document, consent and operational admin handlers. |
+| `frontend/src/components` | Navigation, document cards, stats, upload form, clinical timeline/revision/task forms and role-aware consent workspaces. |
+| `backend/app/api` | Auth/session, patient profile, document, clinical records, consent and operational admin handlers. |
 | `backend/app/core` | Password/token functions and HTTP error types. |
 | `backend/app/models` | SQLAlchemy persistence entities. |
 | `backend/app/schemas` | Pydantic API request/response contracts. |
 | `backend/app/services` | Shared authorization, session issuance, filesystem storage and audit persistence. |
 | `backend/app/database.py` | Engine, declarative base and request sessions. |
 | `backend/tests` | Isolated authentication, authorization, consent, storage and migration regression tests. |
-| `backend/migrations` | Original six-table baseline, sessions/consent/verification revision, and patient sharing-code migration. |
+| `backend/migrations` | Original baseline through `0005`: sessions/consent/verification, sharing codes, versioned clinical records and explicit clinical consent. |
 | `scripts` | Secret configuration, legacy-schema migration and disposable test environments. |
 
 ### Actual data model
@@ -62,9 +65,19 @@ erDiagram
     ACCESS_REQUEST o|--o| CONSENT_GRANT : approves
     DOCTOR ||--o{ DOCTOR_VERIFICATION : reviewed
     USER ||--o{ DOCTOR_VERIFICATION : reviewer
+    PATIENT ||--o{ ENCOUNTER : owns
+    ENCOUNTER ||--|{ ENCOUNTER_REVISION : versions
+    ENCOUNTER_REVISION ||--o{ ENCOUNTER_SOURCE : cites
+    MEDICAL_DOCUMENT ||--o{ ENCOUNTER_SOURCE : source
+    ENCOUNTER ||--o{ FOLLOW_UP_TASK : tracks
+    FOLLOW_UP_TASK ||--|{ FOLLOW_UP_REVISION : versions
 ```
 
-Internal patient IDs are independent UUIDs. Patients share a unique short code such as `A123`, consisting of one uppercase letter and three digits. Allocation tries random codes then scans free slots, and rejects registration atomically if all 26,000 slots are occupied. Consent requests resolve the code to the original UUID before applying the same authorization rules. Documents retain uploader, owner, original filename, relative path, validated MIME type, length, checksum, status, optional clinical date and timestamps. Clinical version history is not implemented. Consent supports document categories, optional selected IDs, explicit upload permission, expiration and revocation. Access requests and professional verification decisions have persisted histories.
+Internal patient IDs are independent UUIDs. Patients share a unique short code such as `A123`, consisting of one uppercase letter and three digits. Allocation tries random codes then scans free slots, and rejects registration atomically if all 26,000 slots are occupied. Consent requests resolve the code to the original UUID before applying the same authorization rules. Documents retain uploader, owner, original filename, relative path, validated MIME type, length, checksum, status, optional clinical date and timestamps. Consent supports document categories, optional selected IDs, explicit upload permission, expiration and revocation. Access requests and professional verification decisions have persisted histories.
+
+Encounters and follow-up tasks have stable identities and append-only snapshots with actor, timestamp, provenance and correction reason. Encounter sources link each revision to existing patient-owned documents using foreign keys. Updates compare the expected version atomically, append a revision and audit event in one transaction; stale changes return 409. The timeline combines current encounter revisions and original documents, sorts by clinical date (upload date when missing), and filters before pagination. Dates and overdue calculations use UTC calendar days.
+
+Clinical read/write consent is explicit and defaults off for migrated grants and requests. It requires an unrestricted all-category document grant; document-only or selected-record grants never imply clinical access. Every clinical read, history view and write checks ownership or verified-doctor consent through the shared policy. Patient corrections of clinician entries become patient-reported without changing previous versions. These labels record provenance, not independent medical verification. See [CLINICAL_RECORDS.md](CLINICAL_RECORDS.md).
 
 ### Current upload/download flow
 

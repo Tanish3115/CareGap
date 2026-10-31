@@ -2,7 +2,7 @@ from app.core.time import utc_now
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import String, Boolean, DateTime, ForeignKey, JSON, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -22,6 +22,8 @@ class ConsentGrant(Base):
     scope: Mapped[str] = mapped_column(String(50), default=ConsentScope.ALL.value, nullable=False)
     purpose: Mapped[str] = mapped_column(String(255), nullable=False)
     allow_upload: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    include_clinical_records: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    allow_clinical_write: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     document_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     valid_from: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     valid_until: Mapped[datetime] = mapped_column(DateTime, nullable=False)

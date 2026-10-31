@@ -7,8 +7,10 @@ from app.models.audit import AuditLog, AuditAction
 from app.models.session import AuthSession
 from app.models.access_request import AccessRequest
 from app.models.verification import DoctorVerification
+from app.models.clinical import Encounter, EncounterRevision, EncounterSource, FollowUpTask, FollowUpRevision
 
 __all__ = [
+    "Encounter", "EncounterRevision", "EncounterSource", "FollowUpTask", "FollowUpRevision",
     "AuthSession", "AccessRequest", "DoctorVerification",
     "User",
     "UserRole",

@@ -53,7 +53,7 @@ def test_legacy_adoption_backs_up_and_preserves_records(tmp_path, monkeypatch):
     assert len(list(backup.glob("*.db"))) == 1
     with engine.connect() as connection:
         assert connection.execute(text("SELECT full_name FROM users WHERE id='synthetic'")).scalar_one() == "Synthetic preservation test"
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0004"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0005"
     engine.dispose()
 
 
@@ -70,6 +70,26 @@ def test_legacy_adoption_rejects_unknown_schema(tmp_path):
     assert "no changes made" in result.stderr.lower()
     assert not backup.exists()
     assert inspect(engine).get_table_names() == ["unknown_layout"]
+    engine.dispose()
+
+
+def test_clinical_migration_preserves_document_only_permissions(tmp_path, monkeypatch):
+    url = f"sqlite:///{(tmp_path / 'consent-migration.db').as_posix()}"
+    monkeypatch.setattr(settings, "DATABASE_URL", url)
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    command.upgrade(config, "0004")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO users (id,email,hashed_password,role,full_name,is_active,created_at,updated_at) VALUES ('synthetic','synthetic@example.test','test-hash','patient','Synthetic',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO patients (id,user_id,patient_code,created_at) VALUES ('patient','synthetic','A001',CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO doctors (id,user_id,license_number,specialization,verification_status,created_at) VALUES ('doctor','synthetic','SYNTHETIC','Test','verified',CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO consent_grants (id,patient_id,doctor_id,scope,purpose,valid_from,valid_until,is_revoked,created_at,allow_upload) VALUES ('grant','patient','doctor','all','Synthetic',CURRENT_TIMESTAMP,'2027-01-01',0,CURRENT_TIMESTAMP,1)"))
+        connection.execute(text("INSERT INTO access_requests (id,patient_id,doctor_id,scope,purpose,duration_hours,allow_upload,status,created_at) VALUES ('request','patient','doctor','all','Synthetic',24,1,'pending',CURRENT_TIMESTAMP)"))
+    command.upgrade(config, "head")
+    with engine.connect() as connection:
+        for table in ("consent_grants", "access_requests"):
+            row = connection.execute(text(f"SELECT allow_upload,include_clinical_records,allow_clinical_write FROM {table}")).one()
+            assert tuple(row) == (1, 0, 0)
     engine.dispose()
 
 

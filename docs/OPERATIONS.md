@@ -18,7 +18,7 @@ For the exact original unversioned six-table layout, stop the old backend and ru
 backend/.venv/Scripts/python.exe scripts/adopt_legacy_sqlite.py
 ```
 
-The tool checks table/column names, creates a SQLite backup under ignored `backend/storage/backups`, stamps the known baseline, then applies new revisions. It does not certify arbitrary existing constraints or data quality. Unknown schemas are rejected for manual review. Existing grants become read-only unless separately approved for uploads. Old tokens are invalid because current authentication requires a database session.
+The tool checks a fixed baseline of table/column names, creates a SQLite backup under ignored `backend/storage/backups`, stamps the known baseline, then applies new revisions. It does not certify arbitrary existing constraints or data quality. Unknown schemas are rejected for manual review. Existing grants become document read-only unless separately approved for uploads; migration `0005` leaves clinical viewing/writing disabled on existing grants and requests. Old tokens are invalid because current authentication requires a database session.
 
 Backups are sensitive data. Local development backups are not application-encrypted. Use approved encrypted storage, restricted access and retention controls before handling real medical information.
 
@@ -33,11 +33,12 @@ This repository does not claim an executed production restore drill. Do not run 
 - Administrators provisioned through the CLI can manage verification/operational metadata, not browse clinical documents.
 - Doctor professional verification records an administrator's evidence review. Hospital affiliation is currently self-reported; no license-registry, organization membership or ABDM verification is implied.
 - Grants control document category, optional selected IDs, duration and upload action. Revocation blocks subsequent API requests, not existing authorized downloads.
+- Consultation/follow-up viewing and writing require separate explicit clinical permissions. Clinical sharing includes historical revisions and requires all document categories without selected-record restrictions. Corrections append attributed revisions, use expected-version checks, and preserve prior source links. These are application-level histories, not database- or administrator-proof immutable records.
 - Files are not served from a public static directory. API downloads authenticate, authorize and check the upload checksum. Application-level encryption, malware scanning, immutable object storage and hardened document sandboxing remain future controls.
 - Audit events are database rows, not tamper-resistant immutable storage. Access history is available to patients; admin responses omit clinical details.
 - Browser sessions use HttpOnly/SameSite cookies, origin checks and server-side revocation. API clients may use the returned bearer token. Never place tokens in URLs or application logs.
 - Throttling currently uses process-local memory. Shared rate-limit storage and trusted-proxy configuration are required before multi-worker deployment.
-- Tenant/organization isolation, retention/deletion, patient identity proofing, correction/version history and independent privacy/security review remain open requirements.
+- Tenant/organization isolation, retention/deletion, patient identity proofing, tamper-resistant history and independent privacy/security review remain open requirements.
 
 ## Verification and CI
 

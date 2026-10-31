@@ -12,6 +12,7 @@ from app.api.documents import router as documents_router
 from app.api.patients import router as patients_router
 from app.api.consent import router as consent_router
 from app.api.admin import router as admin_router
+from app.api.clinical import router as clinical_router
 from app.core.limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -66,6 +67,7 @@ app.include_router(documents_router, prefix=settings.API_V1_PREFIX)
 app.include_router(patients_router, prefix=settings.API_V1_PREFIX)
 app.include_router(consent_router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin_router, prefix=settings.API_V1_PREFIX)
+app.include_router(clinical_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health")

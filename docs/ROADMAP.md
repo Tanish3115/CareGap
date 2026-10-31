@@ -1,13 +1,13 @@
 # Implementation roadmap
 
-Updated 30 October 2026. The first patient vertical slice and document-sharing workflow are implemented. See [PROGRESS.md](PROGRESS.md) for executed verification; the full master-prompt product remains incremental work.
+Updated 31 October 2026. The patient document slice, sharing workflow, source-linked consultations, clinical timeline, revision history and follow-up outcomes are implemented. See [PROGRESS.md](PROGRESS.md) for verification; the full master-prompt product remains incremental work.
 
 | Master phase | Status | Remaining work and measurable acceptance |
 | --- | --- | --- |
 | 1: foundation | Core implemented | Python/Next.js runtime, authentication, three role-aware workspaces, migrations, Docker and tests exist. Complete organization/user lifecycle administration and a reusable synthetic seed command. |
-| 2: medical records | Document vertical slice implemented | Extend demographics/documents to encounters, diagnoses, allergies, structured labs, referrals, timeline, correction/version history and private object storage. Every record must retain source/author/verification provenance and pass cross-patient denial tests. |
+| 2: medical records | Documents, consultations, timeline and revisions implemented | Add structured diagnoses, allergies, labs, referrals and private object storage. Existing encounters/tasks retain sources, author and revision history; further resources must preserve this provenance and pass cross-patient denial tests. |
 | 3: prescription extraction | Pending | Add reliable queue, OCR/extraction interfaces, original text/image references, uncertainty, normalization and editable human review. Test unclear handwriting, missing strength, similar names, conflicting dates and wrong patient association; no unreviewed value may become trusted medication data. |
-| 4: access and consent | Document workflow implemented | Professional verification history, doctor requests, patient decisions, record/category scopes, upload permission, expiration, revocation and audit UI work. Extend to verified organizations, clinical-resource scopes and tenant isolation with positive/negative integration tests. |
+| 4: access and consent | Document and explicit clinical consent implemented | Professional verification, patient decisions, record/category scopes, separate document upload and clinical read/write permissions, expiration, revocation and audit UI work. Add verified organizations, finer clinical-resource scopes and tenant isolation. |
 | 5: medication intelligence | Pending | Separate orders/dispensing/reported use/confirmed use; add reconciliation events and source comparison. Test duplicates/overlaps/contradictions/incomplete instructions. Use a validated knowledge provider or explicitly synthetic demonstration adapter, with evidence and clinician review. |
 | 6: care-gap analytics | Pending | First capture appointment/referral/test/follow-up events and outcomes. Build reproducible synthetic baselines with temporal holdout, PR-AUC, calibration, false-positive rates, subgroup evaluation and leakage checks. Clearly label synthetic results. |
 | 7: intervention intelligence | Pending | Record intervention assignment, reason, staff reviewer, timing, outcome and missingness. Start with reviewed rules. Write an evaluation protocol addressing confounding and selection bias; do not describe correlations as individual treatment effects. |
@@ -16,9 +16,9 @@ Updated 30 October 2026. The first patient vertical slice and document-sharing w
 
 ## Next dependency-ordered tasks
 
-1. Add source-linked encounters, correction/version history and follow-up tasks under the existing authorization policy.
-2. Add private object-storage abstraction and reliable processing jobs with visible retry/failure states.
-3. Add OCR/extraction and review of untrusted values; do not invent clinical data or bypass verification.
+1. Add private object-storage abstraction and reliable processing jobs with visible retry/failure states.
+2. Add OCR/extraction and review of untrusted values; do not invent clinical data or bypass verification.
+3. Extend clinical records with structured diagnoses/allergies/labs and referral/appointment outcomes.
 4. Build medication reconciliation before safety assistance or risk-model integration.
 5. Capture representative outcomes before claiming predictive or causal effectiveness.
 

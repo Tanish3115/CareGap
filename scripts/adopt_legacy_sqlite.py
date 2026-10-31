@@ -13,8 +13,6 @@ root = Path(__file__).resolve().parents[1]
 os.chdir(root / "backend")
 sys.path.insert(0, str(root / "backend"))
 from app.config import settings
-from app.database import Base
-import app.models
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import make_url
 from alembic import command
@@ -27,15 +25,20 @@ def adopt(backup_directory=None):
         raise SystemExit("This command only adopts an existing SQLite file. Use migrations directly for a fresh database.")
     engine = create_engine(url)
     inspector = inspect(engine)
-    original_tables = {"users", "patients", "doctors", "medical_documents", "consent_grants", "audit_logs"}
+    # Fixed baseline: later model changes must never redefine which legacy schema is safe to stamp.
+    original_columns = {
+        "users": {"id", "email", "hashed_password", "role", "full_name", "phone", "is_active", "created_at", "updated_at"},
+        "patients": {"id", "user_id", "date_of_birth", "gender", "blood_group", "emergency_contact", "address", "abha_id", "created_at"},
+        "doctors": {"id", "user_id", "license_number", "specialization", "hospital_affiliation", "verification_status", "created_at"},
+        "medical_documents": {"id", "patient_id", "uploader_id", "title", "document_type", "file_path", "file_name", "file_size", "mime_type", "sha256_hash", "status", "clinical_date", "metadata_json", "created_at", "updated_at"},
+        "consent_grants": {"id", "patient_id", "doctor_id", "scope", "purpose", "valid_from", "valid_until", "is_revoked", "revoked_at", "created_at"},
+        "audit_logs": {"id", "actor_id", "patient_id", "action", "resource_type", "resource_id", "ip_address", "details", "created_at"},
+    }
+    original_tables = set(original_columns)
     if set(inspector.get_table_names()) != original_tables:
         raise SystemExit("Schema is not the original six-table database; no changes made.")
     for name in original_tables:
-        expected = set(Base.metadata.tables[name].columns.keys())
-        if name == "consent_grants":
-            expected -= {"allow_upload", "document_ids"}
-        elif name == "patients":
-            expected -= {"patient_code"}
+        expected = original_columns[name]
         actual = {column["name"] for column in inspector.get_columns(name)}
         if actual != expected:
             raise SystemExit(f"Unexpected {name} schema; no changes made.")

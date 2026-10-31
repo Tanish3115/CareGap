@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 from typing import Literal, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +15,7 @@ from app.models.consent import ConsentGrant
 from app.models.access_request import AccessRequest
 from app.models.document import MedicalDocument
 from app.models.audit import AuditAction, AuditLog
-from app.services.authorization import verified_doctor, active_grants, SCOPE_TYPES
+from app.services.authorization import verified_doctor, active_grants, SCOPE_TYPES, clinical_grant
 from app.services.audit_service import audit_service
 from app.core.errors import PermissionDeniedException, ResourceNotFoundException
 
@@ -28,6 +28,16 @@ class AccessRequestIn(BaseModel):
     purpose: str = Field(min_length=5, max_length=255)
     duration_hours: int = Field(default=24, ge=1, le=720)
     allow_upload: bool = False
+    include_clinical_records: bool = False
+    allow_clinical_write: bool = False
+
+    @model_validator(mode="after")
+    def clinical_scope(self):
+        if self.include_clinical_records and self.scope != "all":
+            raise ValueError("Clinical sharing requires all document categories for source access")
+        if self.allow_clinical_write and not self.include_clinical_records:
+            raise ValueError("Clinical write permission requires clinical sharing")
+        return self
 
     @field_validator("patient_id", mode="before")
     @classmethod
@@ -46,7 +56,9 @@ def request_out(db, item):
             "doctor_name": doctor.user.full_name, "organization": doctor.hospital_affiliation,
             "organization_note": "Self-reported affiliation; institution verification is pending",
             "scope": item.scope, "purpose": item.purpose, "duration_hours": item.duration_hours,
-            "allow_upload": item.allow_upload, "status": item.status, "created_at": item.created_at}
+            "allow_upload": item.allow_upload, "include_clinical_records": item.include_clinical_records,
+            "allow_clinical_write": item.allow_clinical_write,
+            "status": item.status, "created_at": item.created_at}
 
 
 @router.post("/requests", status_code=201)
@@ -95,8 +107,8 @@ def decide(request_id: UUID, payload: DecisionIn, ctx=Depends(get_current_patien
     if selected is not None and payload.decision == "approve":
         count = db.query(MedicalDocument).filter(MedicalDocument.id.in_(selected),
                   MedicalDocument.patient_id == patient.id, MedicalDocument.document_type.in_(SCOPE_TYPES[item.scope])).count()
-        if not selected or count != len(selected) or item.allow_upload:
-            raise HTTPException(422, "Select owned records within the requested scope; record-only grants cannot permit uploads")
+        if not selected or count != len(selected) or item.allow_upload or item.include_clinical_records:
+            raise HTTPException(422, "Selected-record grants cannot permit uploads or share clinical records")
     status = "approved" if payload.decision == "approve" else "denied"
     now = utc_now()
     result = db.execute(update(AccessRequest).where(AccessRequest.id == item.id, AccessRequest.status == "pending")
@@ -106,7 +118,9 @@ def decide(request_id: UUID, payload: DecisionIn, ctx=Depends(get_current_patien
     if status == "approved":
         grant = ConsentGrant(patient_id=patient.id, doctor_id=item.doctor_id, scope=item.scope,
                               purpose=item.purpose, valid_from=now, valid_until=now + timedelta(hours=item.duration_hours),
-                              allow_upload=item.allow_upload, document_ids=selected)
+                              allow_upload=item.allow_upload, document_ids=selected,
+                              include_clinical_records=item.include_clinical_records,
+                              allow_clinical_write=item.allow_clinical_write)
         db.add(grant)
         db.flush()
         item.grant_id = grant.id
@@ -123,6 +137,7 @@ def grants(ctx=Depends(get_current_patient), db: Session = Depends(get_db)):
     return [{"id": g.id, "doctor_name": g.doctor.user.full_name, "scope": g.scope, "purpose": g.purpose,
              "valid_until": g.valid_until, "is_revoked": g.is_revoked, "allow_upload": g.allow_upload,
              "document_ids": g.document_ids,
+             "include_clinical_records": g.include_clinical_records, "allow_clinical_write": g.allow_clinical_write,
              "active": not g.is_revoked and g.valid_from <= now < g.valid_until} for g in items]
 
 
@@ -145,6 +160,8 @@ def authorized_patients(user: User = Depends(get_current_user), db: Session = De
     grants = active_grants(db, doctor.id)
     ids = {g.patient_id for g in grants}
     return [{"id": p.id, "full_name": p.user.full_name,
+             "clinical_read": any(g.patient_id == p.id and clinical_grant(g) for g in grants),
+             "clinical_write": any(g.patient_id == p.id and clinical_grant(g, write=True) for g in grants),
              "upload_types": sorted(set().union(*(SCOPE_TYPES[g.scope] for g in grants
                                if g.patient_id == p.id and g.allow_upload and g.document_ids is None)))}
             for p in db.query(Patient).filter(Patient.id.in_(ids))]

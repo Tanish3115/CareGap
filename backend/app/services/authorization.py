@@ -80,3 +80,22 @@ def require_document_access(db, user, document, request):
         audit_service.log_event(db, AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT, "document",
                                 actor_id=user.id, patient_id=document.patient_id, resource_id=document.id)
         raise PermissionDeniedException("You are not authorized to access this document type")
+
+
+def clinical_grant(grant, write=False):
+    """Document-only and selected/category grants never imply clinical access."""
+    return (grant.scope == "all" and grant.document_ids is None and grant.include_clinical_records
+            and (not write or grant.allow_clinical_write))
+
+
+def require_clinical_access(db, user, patient_id, request=None, write=False):
+    if user.role == "patient" and user.patient_profile and user.patient_profile.id == patient_id:
+        return
+    if user.role == "doctor":
+        doctor = verified_doctor(db, user)
+        if any(clinical_grant(g, write) for g in active_grants(db, doctor.id, patient_id)):
+            return
+    audit_service.log_event(db, AuditAction.UNAUTHORIZED_ACCESS_ATTEMPT, "clinical_record",
+                            actor_id=user.id, patient_id=patient_id,
+                            ip_address=request.client.host if request and request.client else None)
+    raise PermissionDeniedException("Patient ownership or explicit active clinical consent required")

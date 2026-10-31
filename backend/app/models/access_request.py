@@ -1,7 +1,7 @@
 from app.core.time import utc_now
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, Integer, CheckConstraint, Boolean, Index, text
+from sqlalchemy import String, DateTime, ForeignKey, Integer, CheckConstraint, Boolean, Index, text, false
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -22,6 +22,8 @@ class AccessRequest(Base):
     purpose: Mapped[str] = mapped_column(String(255))
     duration_hours: Mapped[int] = mapped_column(Integer)
     allow_upload: Mapped[bool] = mapped_column(Boolean, default=False)
+    include_clinical_records: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    allow_clinical_write: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     status: Mapped[str] = mapped_column(String(20), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

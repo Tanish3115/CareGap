@@ -15,9 +15,20 @@ Patient-controlled medical documents and care-continuity foundations. This devel
 - Doctor workspace listing only authorized patients and records; uploads only with explicit permission.
 - Administrator professional verification queue and operational audit metadata. Administrators have no automatic clinical-record access, and public registration cannot create administrators.
 - Patient-visible audit history, bounded requests, authentication throttling and deny-by-default authorization.
+- Source-linked consultations, a searchable chronological document/consultation timeline, and attributed correction history with stale-edit protection.
+- Follow-up tasks linked to consultations, due dates, overdue indicators, completion/cancellation reports and retained outcome history.
+- Separate, explicit clinical viewing and editing consent for verified doctors. Existing document-only grants do not share consultations or follow-ups.
 - Alembic migrations, isolated backend tests, PostgreSQL regression checks, Playwright browser tests and a CI workflow.
 
-OCR/extraction, structured clinical encounters and medication records, reconciliation, predictive models, intervention evaluation, messaging, FHIR/ABDM and organization isolation are not implemented. Local storage is not application-encrypted or an S3 integration. See [progress](docs/PROGRESS.md), [architecture](docs/ARCHITECTURE.md) and [roadmap](docs/ROADMAP.md).
+OCR/extraction, structured diagnoses/allergies/labs and medication records, reconciliation, predictive models, intervention evaluation, appointment scheduling, messaging, FHIR/ABDM and organization isolation are not implemented. Local storage is not application-encrypted or an S3 integration. See [progress](docs/PROGRESS.md), [architecture](docs/ARCHITECTURE.md) and [roadmap](docs/ROADMAP.md).
+
+## Consultations and follow-ups
+
+The patient dashboard includes **Medical timeline & follow-ups**. Add a consultation with a date, notes and optional original documents. Open it to download sources, record a correction, view every earlier version or add a follow-up. Follow-ups support rescheduling, completion, cancellation and reopening, with an attributed reason for each update. Patient edits are labeled patient-reported; doctor entries are clinician-recorded, not independently clinically verified.
+
+Doctors request clinical viewing and optional creation/correction permission in the access-request form. The patient sees these permissions before approval and can revoke them. Clinical sharing includes all consultation/follow-up history and requires all document categories without selected-record restrictions so source documents remain accessible. Document-upload permission is separate. Administrators have no clinical access.
+
+The authenticated `/api/v1/clinical` API provides encounter and follow-up create/list/detail/correction/history routes and a paginated timeline. Corrections use `expected_version` and `correction_reason`; conflicting edits return HTTP 409 without overwriting another revision. See the API docs and [milestone design](docs/CLINICAL_RECORDS.md). These tasks do not send reminders, book appointments or estimate clinical risk.
 
 ## Docker development setup
 

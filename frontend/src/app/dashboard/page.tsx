@@ -21,6 +21,7 @@ import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { api } from "@/lib/api";
 import { CareWorkspace } from "@/components/CareWorkspace";
+import { ClinicalWorkspace } from "@/components/ClinicalWorkspace";
 import { MedicalDocument, PatientProfile, PatientStats } from "@/types";
 
 export default function DashboardPage() {
@@ -216,6 +217,8 @@ export default function DashboardPage() {
             colorScheme="slate"
           />
         </div>
+
+        {currentUser?.patient?.id && <ClinicalWorkspace patientId={currentUser.patient.id} documents={documents} />}
 
         {/* Document Repository & Filters */}
         <div className="space-y-4">
