@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: caregap_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+      POSTGRES_DB: caregap360_db
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caregap_user -d caregap360_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment: &backend_environment
+      DATABASE_URL: postgresql+psycopg://caregap_user:${POSTGRES_PASSWORD}@postgres:5432/caregap360_db
+      SECRET_KEY: ${SECRET_KEY:?Set a random SECRET_KEY in root .env}
+      ENVIRONMENT: development
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      RATE_LIMIT_STORAGE_URI: ${RATE_LIMIT_STORAGE_URI:-memory://}
+      LOCAL_VOLUME_ENCRYPTION_VERIFIED: ${LOCAL_VOLUME_ENCRYPTION_VERIFIED:-false}
+      SUMMARY_PROVIDER: ${SUMMARY_PROVIDER:-extractive}
+      SUMMARY_PROVIDER_URL: ${SUMMARY_PROVIDER_URL:-}
+      SUMMARY_PROVIDER_TOKEN: ${SUMMARY_PROVIDER_TOKEN:-}
+      SUMMARY_PROVIDER_REFERENCE: ${SUMMARY_PROVIDER_REFERENCE:-local-source-extracts-v1}
+      SUMMARY_PROVIDER_APPROVED: ${SUMMARY_PROVIDER_APPROVED:-false}
+      TERMINOLOGY_MODE: ${TERMINOLOGY_MODE:-disabled}
+      TERMINOLOGY_CATALOG_PATH: ${TERMINOLOGY_CATALOG_PATH:-}
+      TERMINOLOGY_CATALOG_SHA256: ${TERMINOLOGY_CATALOG_SHA256:-}
+      TERMINOLOGY_CATALOG_APPROVED: ${TERMINOLOGY_CATALOG_APPROVED:-false}
+      TERMINOLOGY_APPROVAL_REFERENCE: ${TERMINOLOGY_APPROVAL_REFERENCE:-}
+      KNOWLEDGE_MODE: ${KNOWLEDGE_MODE:-disabled}
+      KNOWLEDGE_CATALOG_PATH: ${KNOWLEDGE_CATALOG_PATH:-}
+      KNOWLEDGE_CATALOG_SHA256: ${KNOWLEDGE_CATALOG_SHA256:-}
+      KNOWLEDGE_CATALOG_APPROVED: ${KNOWLEDGE_CATALOG_APPROVED:-false}
+      KNOWLEDGE_APPROVAL_REFERENCE: ${KNOWLEDGE_APPROVAL_REFERENCE:-}
+      STORAGE_DIR: /app/storage/documents
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_BUCKET: ${S3_BUCKET:-caregap-private}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_SERVER_SIDE_ENCRYPTION: ${S3_SERVER_SIDE_ENCRYPTION:-}
+      S3_KMS_KEY_ID: ${S3_KMS_KEY_ID:-}
+      OCR_ENABLED: ${OCR_ENABLED:-true}
+      CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3300}","http://127.0.0.1:${FRONTEND_PORT:-3300}"]'
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8001}:8000"
+    volumes:
+      - document_vault:/app/storage/documents
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_PROXY_TARGET: http://backend:8000
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3300}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    environment: *backend_environment
+    volumes:
+      - document_vault:/app/storage/documents:ro
+    stop_grace_period: 180s
+    depends_on:
+      backend:
+        condition: service_healthy
+  file-cleanup:
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.file_cleanup"]
+    environment: *backend_environment
+    volumes:
+      - document_vault:/app/storage/documents
+    depends_on:
+      backend:
+        condition: service_healthy
+  minio:
+    profiles: ["object-storage"]
+    build: ./infra/minio
+    image: caregap-minio:local
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-59000}:9000"
+    volumes:
+      - private_objects:/data
+volumes:
+  postgres_data:
+  document_vault:
+  private_objects:

@@ -1,0 +1,8 @@
+{
+  "en": { "name": "English", "nativeName": "English", "direction": "ltr", "catalog": null },
+  "hi": { "name": "Hindi", "nativeName": "हिन्दी", "direction": "ltr", "catalog": "hi.json" },
+  "ta": { "name": "Tamil", "nativeName": "தமிழ்", "direction": "ltr", "catalog": "ta.json" },
+  "te": { "name": "Telugu", "nativeName": "తెలుగు", "direction": "ltr", "catalog": "te.json" },
+  "kn": { "name": "Kannada", "nativeName": "ಕನ್ನಡ", "direction": "ltr", "catalog": "kn.json" },
+  "ml": { "name": "Malayalam", "nativeName": "മലയാളം", "direction": "ltr", "catalog": "ml.json" }
+}

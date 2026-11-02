@@ -1,0 +1,13 @@
+# Disposable synthetic-only demonstration. No database, disk or paid service is provisioned.
+services:
+  - type: web
+    name: caregap-free-demo
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: infra/free-demo/Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PORT
+        value: "10000"

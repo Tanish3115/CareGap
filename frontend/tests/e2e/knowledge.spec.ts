@@ -1,0 +1,30 @@
+import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { openSection } from "./navigation";
+
+test("knowledge evidence shows partial coverage and unavailable releases never imply safety", async ({ page }) => {
+  const email=`synthetic-knowledge-${Date.now()}@example.com`;
+  expect((await page.request.post('/api/v1/auth/register',{data:{email,password:'SyntheticKnowledge123!',full_name:'Synthetic Knowledge Patient',role:'patient'}})).status()).toBe(201);
+  await page.request.post('/api/v1/auth/login',{data:{email,password:'SyntheticKnowledge123!'}});
+  let unavailable=false;
+  await page.route('**/api/v1/clinical/medication-review?*',route=>route.fulfill({json:{evidence:[],indicators:[],synthetic_demonstrations:[],clinical_knowledge_provider:'SYNTHETIC knowledge fixture',clinical_safety_checked:false,allergy_records_included:true,truncated:false,limitations:'Synthetic UI fixture only.',approved_knowledge:{status:unavailable?'unavailable':'available',reference:'SYNTHETIC knowledge release',release:'test-1',eligible_sources:2,excluded_sources:1,assessed_pairs:1,unassessed_pairs:2,findings:unavailable?[]:[{finding:'advisory',message:'SYNTHETIC evidence advisory',evidence_reference:'urn:caregap:software-test'}]}}}));
+  await page.goto('/dashboard');
+  await openSection(page,'care');
+  await page.getByText('Medication comparison indicators',{exact:true}).click();
+  await page.getByRole('button',{name:'Compare recorded medication sources',exact:true}).click();
+  const panel=page.getByRole('region',{name:'Knowledge release evidence',exact:true});
+  await expect(panel).toContainText('Excluded sources: 1');
+  await expect(panel).toContainText('Unassessed pairs: 2');
+  await expect(panel).toContainText('Current use, timing, allergies and safe doses are not established.');
+  await expect(panel).toContainText('SYNTHETIC evidence advisory');
+  const kn=JSON.parse(readFileSync(path.join(process.cwd(),'src/locales/kn.json'),'utf8'));
+  await page.getByLabel('Application language / भाषा',{exact:true}).selectOption('kn');
+  await expect(page.getByRole('heading',{name:kn['Knowledge release evidence'],exact:true})).toBeVisible();
+  await expect(page.getByText('SYNTHETIC evidence advisory',{exact:true})).toBeVisible();
+  await page.getByLabel('Application language / भाषा',{exact:true}).selectOption('en');
+  unavailable=true;
+  await page.getByRole('button',{name:'Compare recorded medication sources',exact:true}).click();
+  await expect(panel).toContainText('Knowledge release unavailable, changed or expired. No safety clearance is available.');
+  await expect(panel.getByText('SYNTHETIC evidence advisory',{exact:true})).toHaveCount(0);
+});

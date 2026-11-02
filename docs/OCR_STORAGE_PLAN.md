@@ -1,0 +1,13 @@
+# Object storage, OCR and source review
+
+31 October 2026. Work remains local; no GitHub push is authorized.
+
+1. Add a real S3-compatible adapter using the official AWS SDK. Store the backend on each document so existing local uploads remain accessible. Validate/checksum uploads before private object writes; materialize authenticated downloads privately and clean up temporary files. No public ACLs, bucket listing UI or direct object URLs.
+2. Provide optional local MinIO configuration and an explicit bucket-provisioning command. Keep local storage as the default until configured. Exercise actual S3 operations against a synthetic-only bucket and deny anonymous object reads.
+3. Add local Tesseract OCR for images and scanned PDF pages, using bounded Poppler rendering, timeouts, image/page/text/word limits and source checksums. Keep page references and OCR confidence; missing tools and unreadable pages must remain explicit. Confidence is engine output, not clinical certainty.
+4. Add append-only source-transcription reviews with editable text, actor, reason, source checksum, processing version/attempt and expected-version checks. Patient reports and clinician reviews remain distinct. Doctor edits require clinical write consent plus source-document access. A source review does not verify medication orders or diagnose a condition.
+5. Build the review UI next to original-source download and processing output. Validate authorization, wrong-patient linkage, stale reviews, OCR uncertainty/limits, legacy storage preservation, real printed-image/scanned-PDF OCR, and actual private S3 operations. Run SQLite/PostgreSQL/browser/build checks and preserve all application data.
+
+Structured prescription extraction/normalization, medication reconciliation, clinical safety providers and independent clinical validation are later milestones. Never infer missing drug strength, dose or instructions from OCR text.
+
+Primary implementation references: [Boto3 configuration](https://docs.aws.amazon.com/boto3/latest/guide/configuration.html), [S3 put_object](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/put_object.html), [S3 get_object](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/get_object.html), [Tesseract CLI and TSV](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html). The optional MinIO development image is built from its [published source release](https://github.com/minio/minio/releases/tag/RELEASE.2025-10-15T17-29-55Z); the repository is archived and public prebuilt images were unavailable. This is a local integration target, not a production support/security certification.
