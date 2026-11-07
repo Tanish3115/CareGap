@@ -1,5 +1,11 @@
 # Current implementation progress
 
+## Hosted service verification and source publication — 8 November 2026
+
+- The user's persistent-data deployment is reachable at https://caregap360.vercel.app. Public frontend and proxied API health returned 200; API reported `demo_mode=false`. Supabase database connection/schema `0019` and private-bucket metadata, Redis PING, synthetic S3 upload/download SHA-256 and unsigned-download rejection all passed. The temporary synthetic object was removed. Hosted administrator login, cookie authentication, logout and rejection afterward passed without reading patient records.
+- These are scoped connectivity/auth/storage checks. They do not claim a Render-restart persistence test, complete hosted browser/OCR regression, migration of existing local records, independent clinical/security review or guaranteed free-service availability.
+- For the requested source push, restored a real connection string accidentally entered in the public environment example to its original placeholder before staging. Private hosted environments, credentials, operational helpers, databases and documents remain excluded. Documentation now reflects the hosted status and current 1039-key translation coverage. No application implementation changed in this publication.
+
 ## Registration validation diagnostics — 8 November 2026
 
 - A hosted doctor-registration report returned HTTP 422. Previously all input-validation failures displayed the same generic text, so users could not identify the rejected field. Registration now returns the first invalid field's fixed requirement for email, password (including UTF-8 byte limits), name, account role, phone and clinician fields. No submitted value, custom validator prose, arbitrary field name or error context is returned. Invalid input remains rejected, and other API validation keeps its generic privacy-safe response.

@@ -1,12 +1,12 @@
 # CareGap 360
 
-Hosting preparation for Vercel, Render, Supabase and TLS Redis is documented in [HOSTING_HANDOVER.md](docs/HOSTING_HANDOVER.md). Configuration templates and local migration tooling are ready; public deployment and transfer of existing records have not been performed. The GitHub publication commands and their meanings are documented in [GITHUB_COMMANDS.md](docs/GITHUB_COMMANDS.md).
+Hosted application: **https://caregap360.vercel.app**. On 8 November 2026, the frontend/API, hosted administrator login/logout, Supabase database/private storage and Upstash Redis connectivity checks passed. This is a development hosting check, not clinical or production certification. Existing local records have not been migrated, and persistence across a Render restart has not yet been exercised. Hosting details are in [HOSTING_HANDOVER.md](docs/HOSTING_HANDOVER.md); GitHub commands and their meanings are in [GITHUB_COMMANDS.md](docs/GITHUB_COMMANDS.md).
 
 Patient-controlled medical documents and care-continuity workflows, with source history, scoped sharing and professional verification. Use synthetic data only until the required clinical, privacy, security and operational reviews are completed.
 
 ## Free demo deployment
 
-An earlier source snapshot is published separately on [`deploy/free-demo`](https://github.com/Tanish3115/CareGap/tree/deploy/free-demo). Current application source is maintained on `main`; the demo branch is retained. [Open the Render deployment setup](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTanish3115%2FCareGap%2Ftree%2Fdeploy%2Ffree-demo) and sign in to create the free, disposable service. A hosted public URL has not yet been created; records in this demo reset on restart. Credentials and patient records are excluded from source publication.
+An earlier source snapshot is published separately on [`deploy/free-demo`](https://github.com/Tanish3115/CareGap/tree/deploy/free-demo). Current application source is maintained on `main`; the demo branch is retained. [Open the Render demo setup](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FTanish3115%2FCareGap%2Ftree%2Fdeploy%2Ffree-demo) to create a separate disposable service. Records in that demo reset on restart. The hosted application linked above uses the persistent-data profile instead. Credentials and patient records are excluded from source publication.
 
 ## Working functionality
 
@@ -18,7 +18,7 @@ Patients can delete uploaded documents, consultations, individual follow-ups, me
 
 The medication comparison now supports a disabled-by-default [approved offline pair-evidence adapter](docs/APPROVED_KNOWLEDGE.md), with pinned data, current reviewed coding and explicit coverage gaps. [Offline extraction evaluation](docs/EXTRACTION_VALIDATION.md) provides reproducible field/error metrics for synthetic or independently approved annotated cases. Neither mechanism supplies clinical approval or a safety clearance.
 
-Language choices: **Kannada, Telugu, Tamil, Malayalam, English and Hindi**. Each translated interface catalog covers all 1003 reference entries. Clinical source text stays unchanged. Native clinical-language review remains a deployment requirement. See [language coverage](docs/LOCALIZATION.md).
+Language choices: **Kannada, Telugu, Tamil, Malayalam, English and Hindi**. Each translated interface catalog covers all 1039 reference entries. Clinical source text stays unchanged. Native clinical-language review remains a deployment requirement. See [language coverage](docs/LOCALIZATION.md).
 
 - Patient and pending-doctor registration; bcrypt passwords; expiring JWT sessions with server-side revocation.
 - Browser authentication using HttpOnly, SameSite cookies. Credentials are not stored in localStorage.
