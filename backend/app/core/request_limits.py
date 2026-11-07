@@ -4,6 +4,7 @@ from starlette.exceptions import HTTPException
 
 class RequestSizeLimit:
     """Bound multipart input before Starlette finishes spooling it to disk."""
+
     def __init__(self, app, max_bytes):
         self.app = app
         self.max_bytes = max_bytes
@@ -15,9 +16,13 @@ class RequestSizeLimit:
         try:
             declared = int(headers.get(b"content-length", b"0"))
         except ValueError:
-            return await JSONResponse({"detail": "Invalid Content-Length"}, status_code=400)(scope, receive, send)
+            return await JSONResponse({"detail": "Invalid Content-Length"}, status_code=400)(
+                scope, receive, send
+            )
         if declared > self.max_bytes:
-            return await JSONResponse({"detail": "Request exceeds maximum upload size"}, status_code=413)(scope, receive, send)
+            return await JSONResponse({"detail": "Request exceeds maximum upload size"}, status_code=413)(
+                scope, receive, send
+            )
         consumed = 0
 
         async def limited_receive():

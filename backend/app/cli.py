@@ -1,7 +1,8 @@
 """Explicit local operational commands; never expose administrator provisioning publicly."""
+
 import argparse
 import getpass
-from app.database import SessionLocal, engine
+from app.database import SessionLocal
 from app.models.user import User
 from app.core.security import hash_password
 from app.schemas.auth import UserRegister
@@ -21,7 +22,12 @@ def main():
     with SessionLocal() as db:
         if db.query(User).filter_by(email=str(validated.email).lower()).first():
             raise SystemExit("Account already exists; refusing to change privileges")
-        user = User(email=str(validated.email).lower(), full_name=args.name, role="admin", hashed_password=hash_password(password))
+        user = User(
+            email=str(validated.email).lower(),
+            full_name=args.name,
+            role="admin",
+            hashed_password=hash_password(password),
+        )
         db.add(user)
         db.flush()
         audit_service.log_event(db, "PROVISION_ADMIN", "user", actor_id=user.id, resource_id=user.id)

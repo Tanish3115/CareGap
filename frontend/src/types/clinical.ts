@@ -48,10 +48,18 @@ export interface TimelineEntry {
 }
 
 export type EncounterInput = {
-  occurred_on: string; title: string; notes: string; source_document_ids: string[];
-  expected_version?: number; correction_reason?: string;
+  occurred_on: string;
+  title: string;
+  notes: string;
+  source_document_ids: string[];
+  expected_version?: number;
+  correction_reason?: string;
 };
 export type FollowUpInput = {
-  title: string; due_on: string; status: TaskStatus; outcome: string | null;
-  expected_version?: number; correction_reason?: string;
+  title: string;
+  due_on: string;
+  status: TaskStatus;
+  outcome: string | null;
+  expected_version?: number;
+  correction_reason?: string;
 };

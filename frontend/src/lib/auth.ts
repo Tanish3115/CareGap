@@ -1,4 +1,4 @@
-import { AuthResponse } from "@/types";
+import type { AuthResponse } from "@/types";
 
 // The credential is an HttpOnly server cookie. Never persist tokens in browser storage.
 export function setAuthSession(_data: AuthResponse) {

@@ -1,0 +1,69 @@
+{
+  "mode": "synthetic_only",
+  "study_id": "synthetic-intervention-v1",
+  "protocol_sha256": "b33ed22564bae4820a1c01b800af0f083b5ec013914b2716c7970e787a9af838",
+  "dataset_sha256": "dfdeb6f1e9c3e6da68bc982ac6da51b6b58a6a8bd4d8bb000af0d463cec291ad",
+  "assigned_arm_counts": {
+    "0": {
+      "assigned": 1030,
+      "completed": 217,
+      "not_completed": 813,
+      "missing_or_immature": 0,
+      "not_received": 1030,
+      "receipt_unknown": 0,
+      "observed_completion_rate": 0.21067961165048543,
+      "all_assigned_rate_bounds": [
+        0.21067961165048543,
+        0.21067961165048543
+      ]
+    },
+    "1": {
+      "assigned": 970,
+      "completed": 328,
+      "not_completed": 642,
+      "missing_or_immature": 0,
+      "not_received": 0,
+      "receipt_unknown": 0,
+      "observed_completion_rate": 0.33814432989690724,
+      "all_assigned_rate_bounds": [
+        0.33814432989690724,
+        0.33814432989690724
+      ]
+    }
+  },
+  "baseline_balance": {
+    "prior_missed": {
+      "control_mean": 1.5203883495145631,
+      "assigned_intervention_mean": 1.5484536082474227,
+      "unadjusted_mean_difference": 0.028065258732859588
+    },
+    "barrier_count": {
+      "control_mean": 1.533009708737864,
+      "assigned_intervention_mean": 1.4896907216494846,
+      "unadjusted_mean_difference": -0.043318987088379446
+    }
+  },
+  "analyzed_by": "assigned_arm_not_received_treatment",
+  "observed_case_difference": 0.1274647182464218,
+  "registered_randomized_complete_outcome_difference": 0.1274647182464218,
+  "standard_error": 0.019813371466992163,
+  "normal_approximation_95_interval": [
+    0.08863051017111717,
+    0.16629892632172644
+  ],
+  "missing_outcome_difference_bounds": [
+    0.1274647182464218,
+    0.1274647182464218
+  ],
+  "clinical_causal_validation": false,
+  "individual_treatment_effects": null,
+  "automatic_interventions": false,
+  "limitations": [
+    "Research software output, not clinical effectiveness or an individualized treatment recommendation.",
+    "Randomization and approval references are operator assertions requiring independent verification.",
+    "Missing/immature outcomes are not failures; no effect estimate is returned with missing outcomes or observational allocation.",
+    "Worst/best binary-outcome bounds are sensitivity checks, not confidence intervals.",
+    "The normal approximation interval is only provided with at least 20 assigned and five observed outcomes of each value in each arm.",
+    "Observational comparisons remain unadjusted associations; confounding, selection bias, interference and measurement error require separate study review."
+  ]
+}

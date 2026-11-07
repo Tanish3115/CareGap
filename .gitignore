@@ -40,6 +40,23 @@ backend/storage/backups/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+!**/.env.example
+*.env
+
+# Private credentials, local archives and database sidecars
+.aws/
+.codex/
+*.zip
+*.dump
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 
 # OS files
 .DS_Store

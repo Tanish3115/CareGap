@@ -1,5 +1,4 @@
-import React from "react";
-import { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
   title: string;
@@ -9,13 +8,7 @@ interface StatsCardProps {
   colorScheme?: "blue" | "emerald" | "amber" | "slate";
 }
 
-export function StatsCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  colorScheme = "blue",
-}: StatsCardProps) {
+export function StatsCard({ title, value, description, icon: Icon, colorScheme = "blue" }: StatsCardProps) {
   const colorStyles = {
     blue: "bg-blue-50 text-blue-600 border-blue-100",
     emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -26,9 +19,7 @@ export function StatsCard({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition-shadow">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          {title}
-        </span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</span>
         <div className={`flex h-9 w-9 items-center justify-center rounded-lg border ${colorStyles}`}>
           <Icon className="h-5 w-5" />
         </div>
@@ -40,4 +31,3 @@ export function StatsCard({
     </div>
   );
 }
-

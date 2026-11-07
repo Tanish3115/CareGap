@@ -1,10 +1,9 @@
 from tests.helpers import pdf_bytes
 import io
-import pytest
 
 
 def test_upload_pdf_prescription_success(client, patient_token):
-    file_content = pdf_bytes('%PDF-1.4 sample clinical prescription text for test')
+    file_content = pdf_bytes("%PDF-1.4 sample clinical prescription text for test")
     file_obj = io.BytesIO(file_content)
 
     response = client.post(
@@ -30,7 +29,7 @@ def test_upload_pdf_prescription_success(client, patient_token):
 
 
 def test_upload_disallowed_extension_fails(client, patient_token):
-    file_content = pdf_bytes('malicious binary payload')
+    file_content = pdf_bytes("malicious binary payload")
     file_obj = io.BytesIO(file_content)
 
     response = client.post(
@@ -45,7 +44,7 @@ def test_upload_disallowed_extension_fails(client, patient_token):
 
 def test_list_and_download_patient_documents(client, patient_token):
     # 1. Upload a document
-    file_content = pdf_bytes('Simulated Blood Test CBC Results: Normal')
+    file_content = pdf_bytes("Simulated Blood Test CBC Results: Normal")
     file_obj = io.BytesIO(file_content)
 
     upload_res = client.post(
@@ -84,4 +83,3 @@ def test_list_and_download_patient_documents(client, patient_token):
     assert download_res.status_code == 200
     assert download_res.content == file_content
     assert download_res.headers["content-type"] == "application/pdf"
-

@@ -1,4 +1,5 @@
 """Add simple patient sharing codes without changing existing UUID relationships."""
+
 import secrets
 from alembic import op
 import sqlalchemy as sa
@@ -19,8 +20,10 @@ def upgrade():
             if code not in codes:
                 codes.add(code)
                 break
-        connection.execute(sa.text("UPDATE patients SET patient_code = :code WHERE id = :id"),
-                           {"code": code, "id": patient_id})
+        connection.execute(
+            sa.text("UPDATE patients SET patient_code = :code WHERE id = :id"),
+            {"code": code, "id": patient_id},
+        )
     with op.batch_alter_table("patients") as batch:
         batch.alter_column("patient_code", existing_type=sa.String(11), nullable=False)
     op.create_index("ix_patients_patient_code", "patients", ["patient_code"], unique=True)

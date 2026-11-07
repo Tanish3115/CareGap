@@ -1,5 +1,5 @@
 name: Application checks
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -21,7 +21,19 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install --require-hashes -r requirements.lock.txt
+      - run: pip install --require-hashes -r requirements-dev.lock.txt
+      - name: Python lint and formatting
+        run: |
+          python -m ruff check app tests migrations ../scripts ../research ../infra/free-demo/start.py --config pyproject.toml
+          python -m ruff format --check app tests migrations ../scripts ../research ../infra/free-demo/start.py --config pyproject.toml
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils fonts-dejavu-core
       - run: python -m pytest -q
+      - name: Reproduce the synthetic-only baseline evaluation
+        run: python ../scripts/evaluate_synthetic.py
+      - name: Validate the offline synthetic intervention study
+        run: python ../scripts/evaluate_interventions.py
+      - name: Validate the offline extraction fixture
+        run: python ../scripts/evaluate_extraction.py
       - name: PostgreSQL migrations and API regression
         run: python ../scripts/check_postgres.py
         env:
@@ -41,7 +53,32 @@ jobs:
       - run: python -m venv backend/.venv && backend/.venv/bin/pip install --require-hashes -r backend/requirements.lock.txt
       - run: npm ci
         working-directory: frontend
-      - run: npm run typecheck && npm run lint && npm run build
+      - run: npm run check:locales && npm run typecheck && npm run lint && npm run format:check && npm run build
         working-directory: frontend
       - run: npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: frontend
+  container-and-handover:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate private ephemeral build configuration
+        run: python scripts/configure.py
+      - name: Validate and build deployable containers
+        run: docker compose config --quiet && docker compose build
+      - name: Build the isolated free demo image
+        run: docker build -f infra/free-demo/Dockerfile -t caregap-free-demo:ci .
+      - name: Package and verify source-only handover
+        run: python scripts/package_handover.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-source-handover
+          path: .tools/handover/CareGap-360-source-*.zip*
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

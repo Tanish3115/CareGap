@@ -27,6 +27,9 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     # Relationships
-    patient_profile = relationship("Patient", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    doctor_profile = relationship("Doctor", back_populates="user", uselist=False, cascade="all, delete-orphan")
-
+    patient_profile = relationship(
+        "Patient", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    doctor_profile = relationship(
+        "Doctor", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )

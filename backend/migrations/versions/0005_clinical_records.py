@@ -1,4 +1,5 @@
 """Versioned encounters, source links, follow-ups and explicit clinical consent."""
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -38,25 +39,43 @@ def revision_columns(parent_column, parent_table):
 
 def upgrade():
     for table in ("consent_grants", "access_requests"):
-        op.add_column(table, sa.Column("include_clinical_records", sa.Boolean(), nullable=False, server_default=sa.false()))
-        op.add_column(table, sa.Column("allow_clinical_write", sa.Boolean(), nullable=False, server_default=sa.false()))
+        op.add_column(
+            table,
+            sa.Column("include_clinical_records", sa.Boolean(), nullable=False, server_default=sa.false()),
+        )
+        op.add_column(
+            table, sa.Column("allow_clinical_write", sa.Boolean(), nullable=False, server_default=sa.false())
+        )
     op.create_table("encounters", *identity_columns())
     op.create_index("ix_encounters_patient_id", "encounters", ["patient_id"])
-    op.create_table("encounter_revisions", *revision_columns("encounter_id", "encounters"),
-        sa.Column("occurred_on", sa.Date(), nullable=False), sa.Column("notes", sa.Text(), nullable=False))
+    op.create_table(
+        "encounter_revisions",
+        *revision_columns("encounter_id", "encounters"),
+        sa.Column("occurred_on", sa.Date(), nullable=False),
+        sa.Column("notes", sa.Text(), nullable=False),
+    )
     op.create_index("ix_encounter_revisions_encounter_id", "encounter_revisions", ["encounter_id"])
-    op.create_table("encounter_sources",
+    op.create_table(
+        "encounter_sources",
         sa.Column("revision_id", sa.String(36), sa.ForeignKey("encounter_revisions.id"), primary_key=True),
-        sa.Column("document_id", sa.String(36), sa.ForeignKey("medical_documents.id"), primary_key=True))
-    op.create_table("follow_up_tasks", *identity_columns(),
-        sa.Column("encounter_id", sa.String(36), sa.ForeignKey("encounters.id"), nullable=False))
+        sa.Column("document_id", sa.String(36), sa.ForeignKey("medical_documents.id"), primary_key=True),
+    )
+    op.create_table(
+        "follow_up_tasks",
+        *identity_columns(),
+        sa.Column("encounter_id", sa.String(36), sa.ForeignKey("encounters.id"), nullable=False),
+    )
     op.create_index("ix_follow_up_tasks_patient_id", "follow_up_tasks", ["patient_id"])
     op.create_index("ix_follow_up_tasks_encounter_id", "follow_up_tasks", ["encounter_id"])
-    op.create_table("follow_up_revisions", *revision_columns("task_id", "follow_up_tasks"),
-        sa.Column("due_on", sa.Date(), nullable=False), sa.Column("status", sa.String(20), nullable=False),
+    op.create_table(
+        "follow_up_revisions",
+        *revision_columns("task_id", "follow_up_tasks"),
+        sa.Column("due_on", sa.Date(), nullable=False),
+        sa.Column("status", sa.String(20), nullable=False),
         sa.Column("outcome", sa.Text(), nullable=True),
         sa.CheckConstraint("status IN ('pending', 'completed', 'cancelled')"),
-        sa.CheckConstraint("status = 'pending' OR outcome IS NOT NULL"))
+        sa.CheckConstraint("status = 'pending' OR outcome IS NOT NULL"),
+    )
     op.create_index("ix_follow_up_revisions_task_id", "follow_up_revisions", ["task_id"])
 
 

@@ -64,4 +64,3 @@ export interface PatientStats {
   pending_care_gaps: number | null;
   active_doctor_grants: number;
 }
-

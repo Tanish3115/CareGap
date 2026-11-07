@@ -1,6 +1,5 @@
 from app.core.time import utc_now
-from fastapi import APIRouter, Depends, HTTPException, status
-from datetime import datetime
+from fastapi import APIRouter, Depends
 from app.models.consent import ConsentGrant
 from app.services.audit_service import audit_service
 from sqlalchemy.orm import Session
@@ -101,9 +100,13 @@ def get_patient_summary_stats(
         "prescriptions_count": prescriptions_count,
         "lab_reports_count": labs_count,
         "pending_care_gaps": None,
-        "active_doctor_grants": db.query(ConsentGrant).filter(
-            ConsentGrant.patient_id == patient.id, ConsentGrant.is_revoked.is_(False),
-            ConsentGrant.valid_from <= utc_now(), ConsentGrant.valid_until > utc_now(),
-            ConsentGrant.scope.in_(["all", "prescriptions_only", "labs_only"])).count(),
+        "active_doctor_grants": db.query(ConsentGrant)
+        .filter(
+            ConsentGrant.patient_id == patient.id,
+            ConsentGrant.is_revoked.is_(False),
+            ConsentGrant.valid_from <= utc_now(),
+            ConsentGrant.valid_until > utc_now(),
+            ConsentGrant.scope.in_(["all", "prescriptions_only", "labs_only"]),
+        )
+        .count(),
     }
-

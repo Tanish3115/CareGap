@@ -1,5 +1,5 @@
 from app.core.time import utc_now
-from typing import Annotated, Generator
+from typing import Annotated
 from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -10,7 +10,6 @@ from app.models.user import User, UserRole
 from app.models.patient import Patient
 from app.models.doctor import Doctor
 from app.models.session import AuthSession
-from datetime import datetime
 from app.config import settings
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -32,7 +31,9 @@ def get_current_user(
 
     if request.method not in ("GET", "HEAD", "OPTIONS") and request.cookies.get("caregap_session"):
         origin = request.headers.get("origin")
-        if (origin and origin not in settings.CORS_ORIGINS) or request.headers.get("sec-fetch-site") == "cross-site":
+        if (origin and origin not in settings.CORS_ORIGINS) or request.headers.get(
+            "sec-fetch-site"
+        ) == "cross-site":
             raise PermissionDeniedException("Cross-site request rejected")
 
     payload = decode_access_token(token)
@@ -40,7 +41,12 @@ def get_current_user(
         raise CredentialsException("Invalid or expired authentication token")
 
     session = db.get(AuthSession, payload["jti"])
-    if not session or session.user_id != payload["sub"] or session.revoked_at or session.expires_at <= utc_now():
+    if (
+        not session
+        or session.user_id != payload["sub"]
+        or session.revoked_at
+        or session.expires_at <= utc_now()
+    ):
         raise CredentialsException("Session expired or revoked")
 
     user_id: str = payload["sub"]
@@ -56,6 +62,7 @@ def require_role(required_role: UserRole):
         if current_user.role != required_role.value:
             raise PermissionDeniedException(f"Requires {required_role.value} privilege")
         return current_user
+
     return role_checker
 
 

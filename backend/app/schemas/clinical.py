@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from app.core.time import utc_now
+from app.core.input_text import safe_text
 
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=500)]
@@ -14,6 +15,7 @@ TaskStatus = Literal["pending", "completed", "cancelled"]
 
 class StrictInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    _safe_text = field_validator("*", mode="after")(safe_text)
 
 
 class EncounterIn(StrictInput):

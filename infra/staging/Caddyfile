@@ -1,0 +1,8 @@
+{
+    admin off
+}
+https://localhost:3443 {
+    tls internal
+    header Strict-Transport-Security "max-age=86400"
+    reverse_proxy frontend:3000
+}

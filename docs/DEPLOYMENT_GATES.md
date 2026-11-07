@@ -1,0 +1,20 @@
+# Deployment and validation gates
+
+1 November 2026. The application is local development software. Passing tests, a TLS rehearsal or an administrator marking an organization verified does not establish clinical, legal or production certification.
+
+Implemented controls include patient/doctor/session/consent enforcement, organization-bound grant checks, history/source checks, hash-locked dependencies, production configuration guards, private storage, optional S3 server-side encryption parameters, local backup/restore tooling and a separate local TLS/shared-Redis rehearsal.
+
+Executable offline knowledge-pair evidence and annotated-text evaluation are now implemented, with disabled defaults and explicit coverage/clinical-validation limits. A separate free, disposable hosting package is prepared and locally tested; it does not satisfy persistent clinical hosting or independent approval. See APPROVED_KNOWLEDGE.md, EXTRACTION_VALIDATION.md and infra/free-demo/README.md.
+
+Remaining work must not be described as complete:
+
+- Approved terminology and validated medication knowledge provider, broader evaluated prescription extraction/handwriting support, approved live source-selection processor configuration if selected, and clinical evaluation of every safety-relevant workflow.
+- General FHIR import/export and external conformance, live ABDM credentials/authorization and appropriate identity/consent integration. The current bounded adapter is not live ABDM.
+- Independent native-language medical review of the six-language interface, patient identity proofing and independent cross-organization security testing. All five translated catalogs cover the 1003 reference entries. Nine clinical sharing groups are implemented; clinical sharing still requires explicitly disclosed all-document access and does not redact original files. Current organization-bound grants do not grant organization-wide access.
+- Representative approved outcomes and external/prospective validation before patient risk scoring, additional model comparisons where appropriate and governed causal study infrastructure. Synthetic evaluations cannot satisfy these requirements.
+- Real messaging provider agreements, consent/preferences, secure destinations, delivery/retry infrastructure and privacy review. Current channel deliveries are local mock records only.
+- Managed keys, encrypted database/volume/object/backup infrastructure and inventory/migration of existing plaintext objects. Setting `LOCAL_VOLUME_ENCRYPTION_VERIFIED` is an operator assertion, not encryption performed by the app; new S3 encryption settings do not retroactively encrypt old objects.
+- Approved retention periods, provider/versioned-object/backup erasure procedures, incident response, tamper-resistant audit retention, tested disaster recovery objectives and production deployment reviews. The offline local erasure tool has reviewed-plan fingerprints and synthetic recovery/isolation tests; it blocks S3 execution and retains declared pseudonymous/audit metadata. It does not erase backups or establish retention compliance. See PRIVACY_ERASURE.md.
+- Independent security/accessibility audits and representative production load testing (automated axe/keyboard and bounded synthetic concurrent-read checks are implemented); hardening of trusted proxy/IP configuration, production TLS/authenticated Redis and production monitoring/alerting.
+
+For the India privacy assessment, counsel should identify the applicable processing purposes, notices/consent, rights/complaints handling, children's data, processors, security/incident duties, retention and cross-border arrangements, and verify which provisions apply on the deployment date. Use the [official MeitY Rules and enforcement-timeline publication hub](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025), including its corrigendum and notified commencement information. This repository does not make a legal-compliance determination.

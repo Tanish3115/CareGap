@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  logging: false,
+  devIndicators: false,
   output: "standalone",
   outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
   distDir: process.env.NEXT_DIST_DIR || ".next",

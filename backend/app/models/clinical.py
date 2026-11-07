@@ -1,4 +1,5 @@
 """Stable clinical identities with append-only, attributed revision snapshots."""
+
 import uuid
 from datetime import date, datetime
 
@@ -28,7 +29,8 @@ class Encounter(Base):
 class EncounterRevision(Base):
     __tablename__ = "encounter_revisions"
     __table_args__ = (
-        UniqueConstraint("encounter_id", "version"), CheckConstraint("version >= 1"),
+        UniqueConstraint("encounter_id", "version"),
+        CheckConstraint("version >= 1"),
         CheckConstraint("provenance IN ('patient_reported', 'clinician_recorded')"),
     )
 
@@ -38,6 +40,13 @@ class EncounterRevision(Base):
     occurred_on: Mapped[date] = mapped_column(Date)
     title: Mapped[str] = mapped_column(String(255))
     notes: Mapped[str] = mapped_column(Text)
+    # Retained for databases already migrated to 0006; no public status workflow remains.
+    status: Mapped[str] = mapped_column(
+        String(20),
+        CheckConstraint("status IN ('active', 'entered_in_error')", name="ck_encounter_revision_status"),
+        default="active",
+        server_default="active",
+    )
     recorded_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
     provenance: Mapped[str] = mapped_column(String(30))
     correction_reason: Mapped[str] = mapped_column(String(500))
@@ -69,7 +78,8 @@ class FollowUpTask(Base):
 class FollowUpRevision(Base):
     __tablename__ = "follow_up_revisions"
     __table_args__ = (
-        UniqueConstraint("task_id", "version"), CheckConstraint("version >= 1"),
+        UniqueConstraint("task_id", "version"),
+        CheckConstraint("version >= 1"),
         CheckConstraint("status IN ('pending', 'completed', 'cancelled')"),
         CheckConstraint("provenance IN ('patient_reported', 'clinician_recorded')"),
         CheckConstraint("status = 'pending' OR outcome IS NOT NULL"),

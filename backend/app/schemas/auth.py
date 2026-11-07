@@ -9,12 +9,12 @@ class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     role: Literal["patient", "doctor"] = "patient"
     phone: Optional[str] = Field(default=None, max_length=50)
-    
+
     # Optional Doctor fields
     license_number: Optional[str] = Field(default=None, max_length=100)
     specialization: Optional[str] = Field(default=None, max_length=100)
     hospital_affiliation: Optional[str] = Field(default=None, max_length=200)
-    
+
     # Optional Patient fields
     date_of_birth: Optional[date] = None
     gender: Optional[str] = Field(default=None, max_length=20)
@@ -50,5 +50,5 @@ class UserOut(BaseModel):
     role: str
     phone: Optional[str] = None
     is_active: bool
-    
+
     model_config = ConfigDict(from_attributes=True)

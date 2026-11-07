@@ -1,0 +1,47 @@
+# Isolated local TLS/shared-limiter rehearsal. Not externally deployed or clinically certified.
+name: caregap-staging
+services:
+  postgres:
+    ports: !reset []
+  backend:
+    image: caregap-backend:latest
+    ports: !reset []
+    environment:
+      ENVIRONMENT: development
+      COOKIE_SECURE: "true"
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/0
+      CORS_ORIGINS: '["https://localhost:3443"]'
+    depends_on:
+      redis:
+        condition: service_healthy
+  frontend:
+    image: caregap-frontend:latest
+    ports: !reset []
+  worker:
+    image: caregap-worker:latest
+  file-cleanup:
+    image: caregap-file-cleanup:latest
+  redis:
+    image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  caddy:
+    image: caddy:2-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3443:3443"
+    volumes:
+      - ./infra/staging/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_started
+volumes:
+  caddy_data:
+  caddy_config:

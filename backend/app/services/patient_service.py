@@ -6,6 +6,7 @@ from app.models.patient import Patient
 
 def create_patient_profile(db, **fields):
     """Allocate a unique code, retrying collisions inside an isolated savepoint."""
+
     def candidates():
         for _ in range(8):
             yield new_patient_code()

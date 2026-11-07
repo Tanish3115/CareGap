@@ -1,6 +1,5 @@
 import os
 import sys
-import tempfile
 from pathlib import Path
 import pytest
 
@@ -18,12 +17,11 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
-from app.config import settings
 from app.main import app
 from app.models.user import User, UserRole
 from app.models.patient import Patient
 from app.models.doctor import Doctor, DoctorVerificationStatus
-from app.core.security import hash_password, create_access_token
+from app.core.security import hash_password
 from app.services.session_service import issue_session
 from app.services.storage_service import storage_service
 from app.core.limiter import limiter
@@ -35,8 +33,11 @@ SQLALCHEMY_DATABASE_URL = os.environ.get("CAREGAP_TEST_DATABASE_URL", "sqlite://
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    **({"connect_args": {"check_same_thread": False}, "poolclass": StaticPool}
-       if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}),
+    **(
+        {"connect_args": {"check_same_thread": False}, "poolclass": StaticPool}
+        if SQLALCHEMY_DATABASE_URL.startswith("sqlite")
+        else {}
+    ),
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -69,6 +70,7 @@ def db_session():
 @pytest.fixture
 def client(db_session):
     """FastAPI TestClient with overridden get_db dependency."""
+
     def override_get_db():
         try:
             yield db_session

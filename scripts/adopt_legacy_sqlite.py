@@ -2,6 +2,7 @@
 
 Stop the application first. Unknown schemas are rejected, never stamped blindly.
 """
+
 import os
 import sqlite3
 import sys
@@ -22,17 +23,84 @@ from alembic.config import Config
 def adopt(backup_directory=None):
     url = make_url(settings.DATABASE_URL)
     if url.get_backend_name() != "sqlite" or not url.database or not Path(url.database).is_file():
-        raise SystemExit("This command only adopts an existing SQLite file. Use migrations directly for a fresh database.")
+        raise SystemExit(
+            "This command only adopts an existing SQLite file. Use migrations directly for a fresh database."
+        )
     engine = create_engine(url)
     inspector = inspect(engine)
     # Fixed baseline: later model changes must never redefine which legacy schema is safe to stamp.
     original_columns = {
-        "users": {"id", "email", "hashed_password", "role", "full_name", "phone", "is_active", "created_at", "updated_at"},
-        "patients": {"id", "user_id", "date_of_birth", "gender", "blood_group", "emergency_contact", "address", "abha_id", "created_at"},
-        "doctors": {"id", "user_id", "license_number", "specialization", "hospital_affiliation", "verification_status", "created_at"},
-        "medical_documents": {"id", "patient_id", "uploader_id", "title", "document_type", "file_path", "file_name", "file_size", "mime_type", "sha256_hash", "status", "clinical_date", "metadata_json", "created_at", "updated_at"},
-        "consent_grants": {"id", "patient_id", "doctor_id", "scope", "purpose", "valid_from", "valid_until", "is_revoked", "revoked_at", "created_at"},
-        "audit_logs": {"id", "actor_id", "patient_id", "action", "resource_type", "resource_id", "ip_address", "details", "created_at"},
+        "users": {
+            "id",
+            "email",
+            "hashed_password",
+            "role",
+            "full_name",
+            "phone",
+            "is_active",
+            "created_at",
+            "updated_at",
+        },
+        "patients": {
+            "id",
+            "user_id",
+            "date_of_birth",
+            "gender",
+            "blood_group",
+            "emergency_contact",
+            "address",
+            "abha_id",
+            "created_at",
+        },
+        "doctors": {
+            "id",
+            "user_id",
+            "license_number",
+            "specialization",
+            "hospital_affiliation",
+            "verification_status",
+            "created_at",
+        },
+        "medical_documents": {
+            "id",
+            "patient_id",
+            "uploader_id",
+            "title",
+            "document_type",
+            "file_path",
+            "file_name",
+            "file_size",
+            "mime_type",
+            "sha256_hash",
+            "status",
+            "clinical_date",
+            "metadata_json",
+            "created_at",
+            "updated_at",
+        },
+        "consent_grants": {
+            "id",
+            "patient_id",
+            "doctor_id",
+            "scope",
+            "purpose",
+            "valid_from",
+            "valid_until",
+            "is_revoked",
+            "revoked_at",
+            "created_at",
+        },
+        "audit_logs": {
+            "id",
+            "actor_id",
+            "patient_id",
+            "action",
+            "resource_type",
+            "resource_id",
+            "ip_address",
+            "details",
+            "created_at",
+        },
     }
     original_tables = set(original_columns)
     if set(inspector.get_table_names()) != original_tables:

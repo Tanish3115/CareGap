@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import get_db, get_current_user, session_token
 from app.core.security import hash_password, verify_password
 from app.models.user import User, UserRole
-from app.models.patient import Patient
 from app.models.doctor import Doctor, DoctorVerificationStatus
 from app.models.audit import AuditAction
 from app.schemas.auth import UserRegister, UserLogin, TokenResponse, UserOut
@@ -49,7 +48,8 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
     # Create specific role profile
     if payload.role == UserRole.PATIENT.value:
         try:
-            create_patient_profile(db,
+            create_patient_profile(
+                db,
                 user_id=new_user.id,
                 date_of_birth=payload.date_of_birth,
                 gender=payload.gender,
@@ -84,9 +84,15 @@ def register_user(payload: UserRegister, request: Request, db: Session = Depends
     client_ip = request.client.host if request.client else None
     try:
         audit_service.log_event(
-            db=db, action=AuditAction.REGISTER, resource_type="user", actor_id=new_user.id,
-            resource_id=new_user.id, ip_address=client_ip,
-            details=f"User registered with role: {new_user.role}", commit=False)
+            db=db,
+            action=AuditAction.REGISTER,
+            resource_type="user",
+            actor_id=new_user.id,
+            resource_id=new_user.id,
+            ip_address=client_ip,
+            details=f"User registered with role: {new_user.role}",
+            commit=False,
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -123,9 +129,15 @@ def login_user(payload: UserLogin, request: Request, response: Response, db: Ses
         )
 
     token = issue_session(db, user)
-    response.set_cookie("caregap_session", token, httponly=True,
-                        secure=settings.COOKIE_SECURE, samesite="strict", path="/",
-                        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(
+        "caregap_session",
+        token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="strict",
+        path="/",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
     audit_service.log_event(
         db=db,
@@ -147,13 +159,20 @@ def login_user(payload: UserLogin, request: Request, response: Response, db: Ses
 
 
 @router.post("/logout", status_code=204)
-def logout(request: Request, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def logout(
+    request: Request,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     token = session_token(request)
     payload = decode_access_token(token)
     session = db.get(AuthSession, payload["jti"])
     session.revoked_at = utc_now()
     audit_service.log_event(db, AuditAction.LOGOUT, "auth", actor_id=user.id)
-    response.delete_cookie("caregap_session", path="/", secure=settings.COOKIE_SECURE, httponly=True, samesite="strict")
+    response.delete_cookie(
+        "caregap_session", path="/", secure=settings.COOKIE_SECURE, httponly=True, samesite="strict"
+    )
 
 
 @router.get("/me")
@@ -192,4 +211,3 @@ def get_current_user_profile(
         }
 
     return profile_data
-

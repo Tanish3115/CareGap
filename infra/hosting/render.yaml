@@ -1,0 +1,44 @@
+# Persistent-data profile, separate from the root disposable-demo Blueprint.
+services:
+  - type: web
+    name: caregap-api
+    runtime: docker
+    plan: free
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    dockerCommand: python -m app.hosted
+    healthCheckPath: /ready
+    autoDeployTrigger: "off"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEMO_MODE
+        value: "false"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: S3_PROVIDER
+        value: supabase
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: RATE_LIMIT_STORAGE_URI
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_BUCKET
+        value: caregap-private
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_MANAGED_ENCRYPTION_VERIFIED
+        sync: false
+      - key: S3_ENCRYPTION_REVIEW_REFERENCE
+        sync: false

@@ -1,0 +1,4 @@
+# Optional offline research tools; never imported by the clinical API/worker.
+numpy>=2,<3
+scikit-learn>=1.7,<2
+xgboost-cpu>=3,<4

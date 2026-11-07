@@ -15,3 +15,5 @@ psycopg[binary]>=3.2.0
 Pillow>=11.0.0
 pypdf>=5.0.0
 slowapi>=0.1.9
+boto3>=1.35.0,<2
+redis>=6,<8

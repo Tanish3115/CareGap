@@ -1,15 +1,14 @@
 from app.core.time import utc_now
 from tests.helpers import pdf_bytes
 import io
-from datetime import datetime, timedelta
-import pytest
+from datetime import timedelta
 from app.models.consent import ConsentGrant, ConsentScope
 from app.models.audit import AuditLog, AuditAction
 
 
 def test_cross_patient_unauthorized_access_denied(client, patient_token, second_patient_token, db_session):
     # Patient 1 uploads a private document
-    file_content = pdf_bytes('Patient 1 confidential health record')
+    file_content = pdf_bytes("Patient 1 confidential health record")
     upload_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {patient_token}"},
@@ -51,7 +50,9 @@ def test_doctor_cannot_access_patient_record_without_consent(
     upload_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {patient_token}"},
-        files={"file": ("visit_summary.pdf", io.BytesIO(pdf_bytes('Visit Summary Content')), "application/pdf")},
+        files={
+            "file": ("visit_summary.pdf", io.BytesIO(pdf_bytes("Visit Summary Content")), "application/pdf")
+        },
         data={"title": "Confidential Consultation", "document_type": "discharge_summary"},
     )
     assert upload_res.status_code == 201
@@ -81,7 +82,7 @@ def test_doctor_access_granted_with_active_consent(
     upload_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {patient_token}"},
-        files={"file": ("presc.pdf", io.BytesIO(pdf_bytes('Amoxicillin 500mg BID')), "application/pdf")},
+        files={"file": ("presc.pdf", io.BytesIO(pdf_bytes("Amoxicillin 500mg BID")), "application/pdf")},
         data={"title": "Prescription", "document_type": "prescription"},
     )
     assert upload_res.status_code == 201
@@ -118,7 +119,7 @@ def test_doctor_access_granted_with_active_consent(
         headers={"Authorization": f"Bearer {doctor_token}"},
     )
     assert dl_res.status_code == 200
-    assert dl_res.content == pdf_bytes('Amoxicillin 500mg BID')
+    assert dl_res.content == pdf_bytes("Amoxicillin 500mg BID")
 
 
 def test_revoked_consent_blocks_future_doctor_access(
@@ -127,7 +128,7 @@ def test_revoked_consent_blocks_future_doctor_access(
     upload_res = client.post(
         "/api/v1/documents/upload",
         headers={"Authorization": f"Bearer {patient_token}"},
-        files={"file": ("lab.pdf", io.BytesIO(pdf_bytes('Lab results')), "application/pdf")},
+        files={"file": ("lab.pdf", io.BytesIO(pdf_bytes("Lab results")), "application/pdf")},
         data={"title": "Lipid Profile", "document_type": "lab_report"},
     )
     doc_id = upload_res.json()["document"]["id"]
@@ -154,4 +155,3 @@ def test_revoked_consent_blocks_future_doctor_access(
         headers={"Authorization": f"Bearer {doctor_token}"},
     )
     assert dl_res.status_code == 403
-

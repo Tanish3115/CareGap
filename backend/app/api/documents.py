@@ -2,17 +2,29 @@ from datetime import date
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
+from contextlib import ExitStack
+from starlette.background import BackgroundTask
+from app.config import settings
 from sqlalchemy.orm import Session
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from app.api.deps import get_db, get_current_user
 from app.core.errors import PermissionDeniedException, ResourceNotFoundException
 from app.models.user import User
 from app.models.patient import Patient
 from app.models.document import MedicalDocument, DocumentType
 from app.models.audit import AuditAction
+from app.models.processing import DocumentProcessingJob
+from app.schemas.processing import ProcessingJobOut
 from app.schemas.document import DocumentResponse, DocumentUploadResponse
 from app.services.storage_service import storage_service
 from app.services.audit_service import audit_service
-from app.services.authorization import permitted_types, require_document_access, document_filter
+from app.services.authorization import (
+    permitted_types,
+    require_document_access,
+    document_filter,
+    allowed_clinical_resources,
+)
 
 router = APIRouter(prefix="/documents", tags=["Medical Documents"])
 
@@ -30,11 +42,14 @@ def target_patient(db, user, supplied_id):
 
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=201)
 async def upload_document(
-    request: Request, file: UploadFile = File(...),
+    request: Request,
+    file: UploadFile = File(...),
     title: str = Form(..., min_length=1, max_length=255),
     document_type: DocumentType = Form(DocumentType.OTHER),
-    clinical_date: date | None = Form(None), patient_id: UUID | None = Form(None),
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    clinical_date: date | None = Form(None),
+    patient_id: UUID | None = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     title = title.strip()
     if not title:
@@ -46,29 +61,55 @@ async def upload_document(
     if not db.get(Patient, target):
         raise ResourceNotFoundException("Patient")
     path, filename, size, checksum = await storage_service.save_patient_document(target, file)
-    doc = MedicalDocument(patient_id=target, uploader_id=current_user.id, title=title,
-                          document_type=document_type.value, file_path=path, file_name=filename,
-                          file_size=size, mime_type=storage_service.mime_for(filename),
-                          sha256_hash=checksum, status="uploaded", clinical_date=clinical_date)
+    doc = MedicalDocument(
+        patient_id=target,
+        uploader_id=current_user.id,
+        title=title,
+        document_type=document_type.value,
+        file_path=path,
+        file_name=filename,
+        file_size=size,
+        mime_type=storage_service.mime_for(filename),
+        sha256_hash=checksum,
+        status="uploaded",
+        clinical_date=clinical_date,
+        storage_backend=settings.STORAGE_BACKEND,
+    )
     try:
         db.add(doc)
         db.flush()
-        audit_service.log_event(db, AuditAction.UPLOAD_DOCUMENT, "document", actor_id=current_user.id,
-                                patient_id=target, resource_id=doc.id, commit=False)
+        db.add(DocumentProcessingJob(document_id=doc.id))
+        audit_service.log_event(
+            db,
+            AuditAction.UPLOAD_DOCUMENT,
+            "document",
+            actor_id=current_user.id,
+            patient_id=target,
+            resource_id=doc.id,
+            commit=False,
+        )
         db.commit()
         db.refresh(doc)
     except Exception:
         db.rollback()
-        storage_service.delete_file(path)
+        storage_service.delete_file(path, backend=doc.storage_backend)
         raise
-    return DocumentUploadResponse(message="Medical document securely stored and registered",
-                                  document=DocumentResponse.model_validate(doc))
+    return DocumentUploadResponse(
+        message="Medical document securely stored and registered",
+        document=DocumentResponse.model_validate(doc),
+    )
 
 
 @router.get("", response_model=list[DocumentResponse])
-def list_documents(request: Request, patient_id: UUID | None = None, document_type: DocumentType | None = None,
-                   limit: int = 100, offset: int = 0,
-                   current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_documents(
+    request: Request,
+    patient_id: UUID | None = None,
+    document_type: DocumentType | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if not 1 <= limit <= 200 or offset < 0:
         raise HTTPException(422, "Invalid pagination")
     if current_user.role == "patient":
@@ -83,13 +124,22 @@ def list_documents(request: Request, patient_id: UUID | None = None, document_ty
     else:
         raise PermissionDeniedException("Patient authorization required")
     allowed = permitted_types(db, current_user, target, request)
-    query = db.query(MedicalDocument).filter(MedicalDocument.patient_id == target,
-                                            MedicalDocument.document_type.in_(allowed),
-                                            document_filter(db, current_user, target))
+    query = db.query(MedicalDocument).filter(
+        MedicalDocument.patient_id == target,
+        MedicalDocument.document_type.in_(allowed),
+        document_filter(db, current_user, target),
+    )
     if document_type:
         query = query.filter(MedicalDocument.document_type == document_type.value)
-    docs = query.order_by(MedicalDocument.created_at.desc(), MedicalDocument.id).offset(offset).limit(limit).all()
-    audit_service.log_event(db, AuditAction.VIEW_RECORD, "document_list", actor_id=current_user.id, patient_id=target)
+    docs = (
+        query.order_by(MedicalDocument.created_at.desc(), MedicalDocument.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    audit_service.log_event(
+        db, AuditAction.VIEW_RECORD, "document_list", actor_id=current_user.id, patient_id=target
+    )
     return docs
 
 
@@ -102,20 +152,160 @@ def authorized_document(db, user, document_id, request):
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document_metadata(document_id: UUID, request: Request,
-                          current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_document_metadata(
+    document_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     doc = authorized_document(db, current_user, document_id, request)
-    audit_service.log_event(db, AuditAction.VIEW_RECORD, "document", actor_id=current_user.id,
-                            patient_id=doc.patient_id, resource_id=doc.id)
+    audit_service.log_event(
+        db,
+        AuditAction.VIEW_RECORD,
+        "document",
+        actor_id=current_user.id,
+        patient_id=doc.patient_id,
+        resource_id=doc.id,
+    )
     return doc
 
 
 @router.get("/{document_id}/download")
-def download_document(document_id: UUID, request: Request,
-                      current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def download_document(
+    document_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     doc = authorized_document(db, current_user, document_id, request)
-    path = storage_service.get_secure_file_path(doc.file_path, doc.sha256_hash)
-    audit_service.log_event(db, AuditAction.DOWNLOAD_DOCUMENT, "document", actor_id=current_user.id,
-                            patient_id=doc.patient_id, resource_id=doc.id)
-    return FileResponse(path, filename=doc.file_name, media_type=doc.mime_type,
-                         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+    stack = ExitStack()
+    try:
+        path = stack.enter_context(
+            storage_service.materialize(doc.file_path, doc.sha256_hash, doc.storage_backend)
+        )
+        audit_service.log_event(
+            db,
+            AuditAction.DOWNLOAD_DOCUMENT,
+            "document",
+            actor_id=current_user.id,
+            patient_id=doc.patient_id,
+            resource_id=doc.id,
+        )
+        return FileResponse(
+            path,
+            filename=doc.file_name,
+            media_type=doc.mime_type,
+            background=BackgroundTask(stack.close),
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
+    except BaseException:
+        stack.close()
+        raise
+
+
+def processing_out(db, job, doc, user):
+    reads = allowed_clinical_resources(db, user, doc.patient_id)
+    writes = allowed_clinical_resources(db, user, doc.patient_id, write=True)
+    return dict(
+        id=job.id if job else None,
+        document_id=doc.id,
+        status=job.status if job else "not_queued",
+        attempts=job.attempts if job else 0,
+        error_code=job.error_code if job else None,
+        result=job.result if job and job.status == "succeeded" else None,
+        started_at=job.started_at if job else None,
+        finished_at=job.finished_at if job else None,
+        can_retry=user.role == "patient" and (job is None or (job.status == "failed" and job.attempts < 3)),
+        can_view_review="source_reviews" in reads,
+        can_review="source_reviews" in writes,
+        can_view_prescription={"source_reviews", "medications"} <= reads,
+        can_edit_prescription={"source_reviews", "medications"} <= writes,
+        can_reprocess=user.role == "patient"
+        and job is not None
+        and job.status == "succeeded"
+        and job.attempts < 3
+        and bool(job.result)
+        and job.result.get("processor_version", "source-text-v1") != "source-ocr-v2",
+    )
+
+
+@router.get("/{document_id}/processing", response_model=ProcessingJobOut)
+def document_processing(
+    document_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = authorized_document(db, current_user, document_id, request)
+    job = db.query(DocumentProcessingJob).filter_by(document_id=doc.id).first()
+    result = processing_out(db, job, doc, current_user)
+    audit_service.log_event(
+        db,
+        "VIEW_DOCUMENT_PROCESSING",
+        "document",
+        actor_id=current_user.id,
+        patient_id=doc.patient_id,
+        resource_id=doc.id,
+    )
+    return result
+
+
+@router.post("/{document_id}/processing/retry", response_model=ProcessingJobOut, status_code=202)
+def retry_document_processing(
+    document_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = authorized_document(db, current_user, document_id, request)
+    if current_user.role != "patient":
+        raise PermissionDeniedException("Only the patient owner can start or retry processing")
+    job = db.query(DocumentProcessingJob).filter_by(document_id=doc.id).first()
+    if job is None:
+        job = DocumentProcessingJob(document_id=doc.id)
+        db.add(job)
+        try:
+            db.flush()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(409, "Processing was already requested")
+    else:
+        previous_status, previous_attempts = job.status, job.attempts
+        outdated = (
+            job.status == "succeeded"
+            and bool(job.result)
+            and job.result.get("processor_version", "source-text-v1") != "source-ocr-v2"
+        )
+        if job.attempts >= 3 or (job.status != "failed" and not outdated):
+            raise HTTPException(409, "Processing is active, current, or the attempt limit was reached")
+        changed = db.execute(
+            update(DocumentProcessingJob)
+            .where(
+                DocumentProcessingJob.id == job.id,
+                DocumentProcessingJob.status == previous_status,
+                DocumentProcessingJob.attempts == previous_attempts,
+                DocumentProcessingJob.attempts < 3,
+            )
+            .values(
+                status="queued",
+                error_code=None,
+                result=None,
+                finished_at=None,
+                lease_token=None,
+                lease_until=None,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if changed.rowcount != 1:
+            db.rollback()
+            raise HTTPException(409, "Processing is active, complete, or the attempt limit was reached")
+    audit_service.log_event(
+        db,
+        "REQUEST_DOCUMENT_PROCESSING",
+        "document",
+        actor_id=current_user.id,
+        patient_id=doc.patient_id,
+        resource_id=doc.id,
+    )
+    db.refresh(job)
+    return processing_out(db, job, doc, current_user)

@@ -1,0 +1,238 @@
+{
+  "mode": "synthetic_only",
+  "model": "logistic_regression",
+  "seed": 360,
+  "version": "synthetic-logistic-v1",
+  "feature_names": [
+    "prior_missed",
+    "prior_incomplete_referrals",
+    "days_since_visit",
+    "lead_days",
+    "barrier_count"
+  ],
+  "weights": [
+    -3.219032745212367,
+    1.7559508356534161,
+    0.9243764546321475,
+    0.7559989780168987,
+    0.3662825541658707,
+    1.2949577224181754
+  ],
+  "threshold": 0.3,
+  "cohorts": {
+    "train": {
+      "count": 1080,
+      "first": "2020-01-01",
+      "last": "2022-12-15"
+    },
+    "validation": {
+      "count": 360,
+      "first": "2022-12-16",
+      "last": "2023-12-10"
+    },
+    "test": {
+      "count": 360,
+      "first": "2023-12-11",
+      "last": "2024-12-04"
+    }
+  },
+  "test": {
+    "count": 360,
+    "prevalence": 0.3333333333333333,
+    "precision": 0.45714285714285713,
+    "recall": 0.8,
+    "average_precision": 0.5599165403941543,
+    "false_positive_rate": 0.475,
+    "brier": 0.19265790494094012,
+    "calibration": [
+      {
+        "lower": 0.0,
+        "upper": 0.2,
+        "count": 65,
+        "predicted": 0.1440482991620279,
+        "observed": 0.1076923076923077
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.4,
+        "count": 148,
+        "predicted": 0.290130763739198,
+        "observed": 0.25675675675675674
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.6,
+        "count": 110,
+        "predicted": 0.49179771486905,
+        "observed": 0.4636363636363636
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.8,
+        "count": 36,
+        "predicted": 0.6689454146781958,
+        "observed": 0.6666666666666666
+      },
+      {
+        "lower": 0.8,
+        "upper": 1.0,
+        "count": 1,
+        "predicted": 0.8216901848932623,
+        "observed": 0.0
+      }
+    ]
+  },
+  "constant_baseline": {
+    "count": 360,
+    "prevalence": 0.3333333333333333,
+    "precision": 0.3333333333333333,
+    "recall": 1.0,
+    "average_precision": 0.3333333333333333,
+    "false_positive_rate": 1.0,
+    "brier": 0.22294324417009603,
+    "calibration": [
+      {
+        "lower": 0.0,
+        "upper": 0.2,
+        "count": 0,
+        "predicted": null,
+        "observed": null
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.4,
+        "count": 360,
+        "predicted": 0.36018518518518516,
+        "observed": 0.3333333333333333
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.6,
+        "count": 0,
+        "predicted": null,
+        "observed": null
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.8,
+        "count": 0,
+        "predicted": null,
+        "observed": null
+      },
+      {
+        "lower": 0.8,
+        "upper": 1.0,
+        "count": 0,
+        "predicted": null,
+        "observed": null
+      }
+    ]
+  },
+  "subgroups": {
+    "synthetic_group_a": {
+      "count": 180,
+      "prevalence": 0.35,
+      "precision": 0.46153846153846156,
+      "recall": 0.7619047619047619,
+      "average_precision": 0.6404928001699934,
+      "false_positive_rate": 0.47863247863247865,
+      "brier": 0.19452934887662643,
+      "calibration": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 31,
+          "predicted": 0.14284062600347744,
+          "observed": 0.16129032258064516
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 75,
+          "predicted": 0.2893250252365312,
+          "observed": 0.25333333333333335
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6,
+          "count": 55,
+          "predicted": 0.4891076954591097,
+          "observed": 0.45454545454545453
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.8,
+          "count": 19,
+          "predicted": 0.6689768599804143,
+          "observed": 0.7368421052631579
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 0,
+          "predicted": null,
+          "observed": null
+        }
+      ]
+    },
+    "synthetic_group_b": {
+      "count": 180,
+      "prevalence": 0.31666666666666665,
+      "precision": 0.4528301886792453,
+      "recall": 0.8421052631578947,
+      "average_precision": 0.499839735085274,
+      "false_positive_rate": 0.4715447154471545,
+      "brier": 0.19078646100525382,
+      "calibration": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 34,
+          "predicted": 0.1451494129242357,
+          "observed": 0.058823529411764705
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 73,
+          "predicted": 0.29095857726933516,
+          "observed": 0.2602739726027397
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6,
+          "count": 55,
+          "predicted": 0.4944877342789904,
+          "observed": 0.4727272727272727
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.8,
+          "count": 17,
+          "predicted": 0.6689102699286575,
+          "observed": 0.5882352941176471
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 1,
+          "predicted": 0.8216901848932623,
+          "observed": 0.0
+        }
+      ]
+    }
+  },
+  "leakage_checks": {
+    "temporal_separation": true,
+    "patient_separation": true,
+    "pre_index_features": true,
+    "threshold_selected_on_validation": true,
+    "outcome_excluded_from_features": true
+  },
+  "limitations": [
+    "Artificial data-generating process; no real-world effectiveness claim",
+    "No patient triage or prescribing use",
+    "Representative approved data and external validation required",
+    "Signed log-odds feature contributions, not causal effects or SHAP values"
+  ]
+}
