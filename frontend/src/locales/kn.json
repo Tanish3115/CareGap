@@ -1029,5 +1029,13 @@
   "Uploading your document. Please keep this window open.": "ನಿಮ್ಮ ದಾಖಲೆ ಅಪ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ. ದಯಚಿಟ್ಟು ಈ ಕಿಟಕಿಯನ್ನು ತೆರೆದಿಡಿ.",
   "Choose a PDF, PNG or JPG file.": "PDF, PNG ಅಥವಾ JPG ಫೈಲ್ ಆಯ್ಕೆ ಮಾಡಿ.",
   "Choose one document at a time.": "ಒಮ್ಮೆ ಒಂದು ದಾಖಲೆ ಆಯ್ಕೆ ಮಾಡಿ.",
-  "Requests awaiting your decision: {count}.": "{count} ವಿನಂತಿಗಳಿಗೆ ನಿಮ್ಮ ನಿರ್ಧಾರ ಬೇಕಿದೆ."
+  "Requests awaiting your decision: {count}.": "{count} ವಿನಂತಿಗಳಿಗೆ ನಿಮ್ಮ ನಿರ್ಧಾರ ಬೇಕಿದೆ.",
+  "Enter a valid email address.": "ಮಾನ್ಯ ಇಮೇಲ್ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ.",
+  "Password must contain 12–72 characters and at most 72 UTF-8 bytes.": "ಪಾಸ್‌ವರ್ಡ್‌ನಲ್ಲಿ 12–72 ಅಕ್ಷರಗಳು ಮತ್ತು ಗರಿಷ್ಠ 72 UTF-8 ಬೈಟ್‌ಗಳು ಇರಬೇಕು.",
+  "Full name must contain 2–255 characters.": "ಪೂರ್ಣ ಹೆಸರಿನಲ್ಲಿ 2–255 ಅಕ್ಷರಗಳು ಇರಬೇಕು.",
+  "Choose a patient or doctor account.": "ರೋಗಿ ಅಥವಾ ವೈದ್ಯರ ಖಾತೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+  "Phone number must contain at most 50 characters.": "ಫೋನ್ ಸಂಖ್ಯೆಯಲ್ಲಿ ಗರಿಷ್ಠ 50 ಅಕ್ಷರಗಳು ಇರಬೇಕು.",
+  "Medical license number must contain at most 100 characters.": "ವೈದ್ಯಕೀಯ ಪರವಾನಗಿ ಸಂಖ್ಯೆಯಲ್ಲಿ ಗರಿಷ್ಠ 100 ಅಕ್ಷರಗಳು ಇರಬೇಕು.",
+  "Specialization must contain at most 100 characters.": "ವಿಶೇಷತೆಯಲ್ಲಿ ಗರಿಷ್ಠ 100 ಅಕ್ಷರಗಳು ಇರಬೇಕು.",
+  "Hospital or clinic name must contain at most 200 characters.": "ಆಸ್ಪತ್ರೆ ಅಥವಾ ಕ್ಲಿನಿಕ್ ಹೆಸರಿನಲ್ಲಿ ಗರಿಷ್ಠ 200 ಅಕ್ಷರಗಳು ಇರಬೇಕು."
 }

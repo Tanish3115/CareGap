@@ -33,6 +33,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.request_limits import RequestSizeLimit
+from app.core.registration_errors import GENERIC_VALIDATION_MESSAGE, registration_validation_message
 from starlette.responses import JSONResponse
 
 
@@ -64,10 +65,14 @@ app.add_middleware(RequestSizeLimit, max_bytes=settings.MAX_FILE_SIZE_BYTES + 65
 
 
 @app.exception_handler(RequestValidationError)
-async def private_validation_error(_request, _exception):
+async def private_validation_error(request, exception):
     # Pydantic errors can echo passwords, clinical input, dictionary keys and
     # custom-validator messages. Keep the existing detail[].msg client contract
-    # without copying any part of the submitted error or request body.
+    # without copying submitted values, validator prose, keys or context. Only
+    # registration gets fixed hints for explicitly allowlisted top-level fields.
+    message = GENERIC_VALIDATION_MESSAGE
+    if request.url.path == f"{settings.API_V1_PREFIX}/auth/register":
+        message = registration_validation_message(exception.errors())
     return JSONResponse(
         status_code=422,
         content={
@@ -75,7 +80,7 @@ async def private_validation_error(_request, _exception):
                 {
                     "type": "request_validation_error",
                     "loc": ["request"],
-                    "msg": "Request failed. Please try again.",
+                    "msg": message,
                 }
             ]
         },

@@ -1029,5 +1029,13 @@
   "Uploading your document. Please keep this window open.": "உங்கள் ஆவணம் பதிவேற்றப்படுகிறது. இந்தச் சாளரத்தைத் திறந்தே வைக்கவும்.",
   "Choose a PDF, PNG or JPG file.": "PDF, PNG அல்லது JPG கோப்பைத் தேர்ந்தெடுக்கவும்.",
   "Choose one document at a time.": "ஒரு நேரத்தில் ஒரு ஆவணத்தைத் தேர்ந்தெடுக்கவும்.",
-  "Requests awaiting your decision: {count}.": "{count} கோரிக்கைகளுக்கு உங்கள் முடிவு தேவை."
+  "Requests awaiting your decision: {count}.": "{count} கோரிக்கைகளுக்கு உங்கள் முடிவு தேவை.",
+  "Enter a valid email address.": "செல்லுபடியாகும் மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+  "Password must contain 12–72 characters and at most 72 UTF-8 bytes.": "கடவுச்சொல்லில் 12–72 எழுத்துகளும் அதிகபட்சம் 72 UTF-8 பைட்டுகளும் இருக்க வேண்டும்.",
+  "Full name must contain 2–255 characters.": "முழுப் பெயரில் 2–255 எழுத்துகள் இருக்க வேண்டும்.",
+  "Choose a patient or doctor account.": "நோயாளி அல்லது மருத்துவர் கணக்கைத் தேர்ந்தெடுக்கவும்.",
+  "Phone number must contain at most 50 characters.": "தொலைபேசி எண்ணில் அதிகபட்சம் 50 எழுத்துகள் இருக்க வேண்டும்.",
+  "Medical license number must contain at most 100 characters.": "மருத்துவ உரிம எண்ணில் அதிகபட்சம் 100 எழுத்துகள் இருக்க வேண்டும்.",
+  "Specialization must contain at most 100 characters.": "சிறப்புத் துறையில் அதிகபட்சம் 100 எழுத்துகள் இருக்க வேண்டும்.",
+  "Hospital or clinic name must contain at most 200 characters.": "மருத்துவமனை அல்லது கிளினிக் பெயரில் அதிகபட்சம் 200 எழுத்துகள் இருக்க வேண்டும்."
 }

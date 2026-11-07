@@ -1,5 +1,11 @@
 # Current implementation progress
 
+## Registration validation diagnostics — 8 November 2026
+
+- A hosted doctor-registration report returned HTTP 422. Previously all input-validation failures displayed the same generic text, so users could not identify the rejected field. Registration now returns the first invalid field's fixed requirement for email, password (including UTF-8 byte limits), name, account role, phone and clinician fields. No submitted value, custom validator prose, arbitrary field name or error context is returned. Invalid input remains rejected, and other API validation keeps its generic privacy-safe response.
+- Added eight message translations to all five regional catalogs (1039 reference keys). Existing registration UI can display the exact translated message without a new client contract. No account verification, consent or password requirement was relaxed.
+- Verification: 58 auth/privacy/registration/hardening tests passed, including normal doctor registration, all new field hints, multibyte password rejection, no partial users and nested/custom-error redaction. Python lint/format, frontend lint/types/format and six-language checks passed. Exact rejected field on the user's live submission is still unknown until the updated backend returns its field hint; no submitted credentials were requested. Render must deploy the latest commit to use the change; publishing source is not a production restart or validation of live provider connectivity.
+
 ## User-authorized GitHub publication — 7 November 2026
 
 - The user explicitly requested publication of the project to the existing `Tanish3115/CareGap` GitHub repository. This supersedes earlier no-push restrictions for current reviewed source on `main`; it does not authorize hosting or transfer of patient records. The separate `deploy/free-demo` branch is retained.

@@ -1029,5 +1029,13 @@
   "Uploading your document. Please keep this window open.": "మీ పత్రం అప్‌లోడ్ అవుతోంది. దయచేసి ఈ విండో తెరిచి ఉంచండి.",
   "Choose a PDF, PNG or JPG file.": "PDF, PNG లేదా JPG ఫైల్ ఎంచుకోండి.",
   "Choose one document at a time.": "ఒకేసారి ఒక పత్రాన్ని ఎంచుకోండి.",
-  "Requests awaiting your decision: {count}.": "{count} అభ్యర్థనలకు మీ నిర్ణయం అవసరం."
+  "Requests awaiting your decision: {count}.": "{count} అభ్యర్థనలకు మీ నిర్ణయం అవసరం.",
+  "Enter a valid email address.": "చెల్లుబాటు అయ్యే ఇమెయిల్ చిరునామాను నమోదు చేయండి.",
+  "Password must contain 12–72 characters and at most 72 UTF-8 bytes.": "పాస్‌వర్డ్‌లో 12–72 అక్షరాలు, గరిష్ఠంగా 72 UTF-8 బైట్లు ఉండాలి.",
+  "Full name must contain 2–255 characters.": "పూర్తి పేరులో 2–255 అక్షరాలు ఉండాలి.",
+  "Choose a patient or doctor account.": "రోగి లేదా వైద్యుడి ఖాతాను ఎంచుకోండి.",
+  "Phone number must contain at most 50 characters.": "ఫోన్ నంబర్‌లో గరిష్ఠంగా 50 అక్షరాలు ఉండాలి.",
+  "Medical license number must contain at most 100 characters.": "వైద్య లైసెన్స్ నంబర్‌లో గరిష్ఠంగా 100 అక్షరాలు ఉండాలి.",
+  "Specialization must contain at most 100 characters.": "ప్రత్యేకతలో గరిష్ఠంగా 100 అక్షరాలు ఉండాలి.",
+  "Hospital or clinic name must contain at most 200 characters.": "ఆసుపత్రి లేదా క్లినిక్ పేరులో గరిష్ఠంగా 200 అక్షరాలు ఉండాలి."
 }

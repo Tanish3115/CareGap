@@ -1029,5 +1029,13 @@
   "Uploading your document. Please keep this window open.": "दस्तावेज़ अपलोड हो रहा है। कृपया यह विंडो खुली रखें।",
   "Choose a PDF, PNG or JPG file.": "PDF, PNG या JPG फ़ाइल चुनें।",
   "Choose one document at a time.": "एक बार में एक दस्तावेज़ चुनें।",
-  "Requests awaiting your decision: {count}.": "{count} अनुरोधों पर आपका निर्णय चाहिए।"
+  "Requests awaiting your decision: {count}.": "{count} अनुरोधों पर आपका निर्णय चाहिए।",
+  "Enter a valid email address.": "मान्य ईमेल पता दर्ज करें।",
+  "Password must contain 12–72 characters and at most 72 UTF-8 bytes.": "पासवर्ड में 12–72 अक्षर और अधिकतम 72 UTF-8 बाइट होने चाहिए।",
+  "Full name must contain 2–255 characters.": "पूरे नाम में 2–255 अक्षर होने चाहिए।",
+  "Choose a patient or doctor account.": "रोगी या डॉक्टर का खाता चुनें।",
+  "Phone number must contain at most 50 characters.": "फ़ोन नंबर में अधिकतम 50 अक्षर होने चाहिए।",
+  "Medical license number must contain at most 100 characters.": "चिकित्सा लाइसेंस नंबर में अधिकतम 100 अक्षर होने चाहिए।",
+  "Specialization must contain at most 100 characters.": "विशेषज्ञता में अधिकतम 100 अक्षर होने चाहिए।",
+  "Hospital or clinic name must contain at most 200 characters.": "अस्पताल या क्लिनिक के नाम में अधिकतम 200 अक्षर होने चाहिए।"
 }

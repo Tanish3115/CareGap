@@ -1029,5 +1029,13 @@
   "Uploading your document. Please keep this window open.": "നിങ്ങളുടെ രേഖ അപ്‌ലോഡ് ചെയ്യുന്നു. ഈ വിൻഡോ തുറന്നുവയ്ക്കുക.",
   "Choose a PDF, PNG or JPG file.": "PDF, PNG അല്ലെങ്കിൽ JPG ഫയൽ തിരഞ്ഞെടുക്കുക.",
   "Choose one document at a time.": "ഒരേസമയം ഒരു രേഖ തിരഞ്ഞെടുക്കുക.",
-  "Requests awaiting your decision: {count}.": "{count} അഭ്യർത്ഥനകളിൽ നിങ്ങളുടെ തീരുമാനം വേണം."
+  "Requests awaiting your decision: {count}.": "{count} അഭ്യർത്ഥനകളിൽ നിങ്ങളുടെ തീരുമാനം വേണം.",
+  "Enter a valid email address.": "സാധുവായ ഇമെയിൽ വിലാസം നൽകുക.",
+  "Password must contain 12–72 characters and at most 72 UTF-8 bytes.": "പാസ്‌വേഡിൽ 12–72 അക്ഷരങ്ങളും പരമാവധി 72 UTF-8 ബൈറ്റുകളും ഉണ്ടായിരിക്കണം.",
+  "Full name must contain 2–255 characters.": "പൂർണ്ണ പേരിൽ 2–255 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.",
+  "Choose a patient or doctor account.": "രോഗിയുടെയോ ഡോക്ടറുടെയോ അക്കൗണ്ട് തിരഞ്ഞെടുക്കുക.",
+  "Phone number must contain at most 50 characters.": "ഫോൺ നമ്പറിൽ പരമാവധി 50 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.",
+  "Medical license number must contain at most 100 characters.": "മെഡിക്കൽ ലൈസൻസ് നമ്പറിൽ പരമാവധി 100 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.",
+  "Specialization must contain at most 100 characters.": "വിദഗ്ധ മേഖലയിൽ പരമാവധി 100 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.",
+  "Hospital or clinic name must contain at most 200 characters.": "ആശുപത്രിയുടെയോ ക്ലിനിക്കിന്റെയോ പേരിൽ പരമാവധി 200 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം."
 }

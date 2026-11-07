@@ -25,33 +25,44 @@ def test_unexpected_failure_never_returns_or_logs_private_exception_contents(cli
 
 
 @pytest.mark.parametrize(
-    "body",
+    "body, expected_message",
     [
-        {"email": "synthetic@example.test", "password": "S3cret!", "full_name": "Synthetic Patient"},
-        {
-            "email": "synthetic@example.test",
-            "password": "SYNTHETIC-PASSWORD-" * 6,
-            "full_name": "Synthetic Patient",
-        },
-        {
-            "email": "SYNTHETIC-PRIVATE-EMAIL",
-            "password": "synthetic-password-for-test",
-            "full_name": "Synthetic Patient",
-        },
-        {
-            "email": "synthetic@example.test",
-            "password": "synthetic-password-for-test",
-            "role": "SYNTHETIC-PRIVATE-ROLE",
-        },
+        (
+            {"email": "synthetic@example.com", "password": "S3cret!", "full_name": "Synthetic Patient"},
+            "Password must contain 12–72 characters and at most 72 UTF-8 bytes.",
+        ),
+        (
+            {
+                "email": "synthetic@example.com",
+                "password": "SYNTHETIC-PASSWORD-" * 6,
+                "full_name": "Synthetic Patient",
+            },
+            "Password must contain 12–72 characters and at most 72 UTF-8 bytes.",
+        ),
+        (
+            {
+                "email": "SYNTHETIC-PRIVATE-EMAIL",
+                "password": "synthetic-password-for-test",
+                "full_name": "Synthetic Patient",
+            },
+            "Enter a valid email address.",
+        ),
+        (
+            {
+                "email": "synthetic@example.com",
+                "password": "synthetic-password-for-test",
+                "full_name": "Synthetic Patient",
+                "role": "SYNTHETIC-PRIVATE-ROLE",
+            },
+            "Choose a patient or doctor account.",
+        ),
     ],
 )
-def test_auth_validation_never_echoes_submitted_values(client, caplog, body):
+def test_auth_validation_never_echoes_submitted_values(client, caplog, body, expected_message):
     response = client.post("/api/v1/auth/register", json=body)
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail == [
-        {"type": "request_validation_error", "loc": ["request"], "msg": "Request failed. Please try again."}
-    ]
+    assert detail == [{"type": "request_validation_error", "loc": ["request"], "msg": expected_message}]
     for value in body.values():
         assert value not in response.text and value not in caplog.text
     assert response.headers["Cache-Control"] == "no-store"
