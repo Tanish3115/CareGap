@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Plus,
   Search,
-  User,
   AlertCircle,
   Loader2,
   ArrowUpRight,
@@ -26,6 +25,7 @@ import {
 } from "@/components/WorkspaceNavigation";
 import { StatsCard } from "@/components/StatsCard";
 import { DocumentCard } from "@/components/DocumentCard";
+import { DoctorDigitalCard, PatientDigitalCard } from "@/components/DigitalCard";
 import { FileCleanupPanel } from "@/components/FileCleanupPanel";
 import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { api, request } from "@/lib/api";
@@ -220,8 +220,19 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navbar user={currentUser} />
-        <WorkspaceNavigation userRole={currentUser.role} section={section} onSection={setSection}>
-          <CareWorkspace user={currentUser} section={section} />
+        <WorkspaceNavigation
+          userRole={currentUser.role}
+          section={section}
+          onSection={setSection}
+          accountCard={
+            currentUser.role === "doctor" && currentUser.doctor ? (
+              <DoctorDigitalCard user={{ ...currentUser, doctor: currentUser.doctor }} />
+            ) : undefined
+          }
+        >
+          <div className="space-y-6">
+            <CareWorkspace user={currentUser} section={section} />
+          </div>
         </WorkspaceNavigation>
       </div>
     );
@@ -231,43 +242,15 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar user={currentUser} />
 
-      <WorkspaceNavigation userRole="patient" section={section} onSection={setSection}>
+      <WorkspaceNavigation
+        userRole="patient"
+        section={section}
+        onSection={setSection}
+        accountCard={patientProfile ? <PatientDigitalCard patient={patientProfile} ownAccount /> : undefined}
+      >
         <div className="space-y-7">
-          {/* Patient Profile Header */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 text-blue-700">
-                <User className="h-7 w-7" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {currentUser?.full_name || t("Patient Record")}
-                  </h2>
-                  <span className="hidden sm:inline-flex items-center space-x-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
-                    <ShieldCheck className="h-3 w-3" />
-                    <span>{t("Patient account")}</span>
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  {currentUser?.email} {currentUser?.phone && t("• {value0}", { value0: currentUser.phone })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {patientProfile?.blood_group && (
-                <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs">
-                  <span className="text-slate-500 font-medium">{t("Blood Group:")}</span>{" "}
-                  <span className="font-bold text-slate-800">{patientProfile.blood_group}</span>
-                </div>
-              )}
-              {patientProfile?.emergency_contact && (
-                <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs">
-                  <span className="text-slate-500 font-medium">{t("Emergency:")}</span>{" "}
-                  <span className="font-semibold text-slate-800">{patientProfile.emergency_contact}</span>
-                </div>
-              )}
+          <div className="space-y-3">
+            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsUploadOpen(true)}
@@ -591,7 +574,7 @@ export default function DashboardPage() {
           </WorkspaceSection>
           {currentUser && (
             <div hidden={!["sharing", "profile"].includes(section)}>
-              <CareWorkspace user={currentUser} section={section} />
+              <CareWorkspace user={currentUser} section={section} onProfileUpdated={setPatientProfile} />
             </div>
           )}
         </div>

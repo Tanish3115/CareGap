@@ -16,7 +16,7 @@ async function audit(page: Page) {
 test("public pages and a patient dashboard pass automated accessibility and keyboard checks", async ({ page }, testInfo) => {
   test.setTimeout(120000);
   const failures = [];
-  for (const route of ["/", "/login", "/register"]) {
+  for (const route of ["/", "/login", "/register", "/forgot-password", "/reset-password"]) {
     await page.goto(route);
     await expect(page).toHaveTitle(/CareGap/);
     await expect(page.locator("main")).toBeVisible();

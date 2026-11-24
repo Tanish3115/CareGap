@@ -151,7 +151,7 @@ def health_check():
 @app.get("/ready")
 def readiness(db: Session = Depends(get_db)):
     try:
-        if db.execute(text("SELECT version_num FROM alembic_version")).scalar_one() != "0019":
+        if db.execute(text("SELECT version_num FROM alembic_version")).scalar_one() != "0020":
             return JSONResponse({"status": "schema_not_ready"}, status_code=503)
         if settings.ENVIRONMENT == "production" and not limiter._storage.check():
             return JSONResponse({"status": "rate_store_not_ready"}, status_code=503)

@@ -74,6 +74,7 @@ OWNED = frozenset(
         "notification_deliveries",
         "summary_processing_consents",
         "auth_sessions",
+        "password_reset_tokens",
         "organization_memberships",
     )
 )
@@ -185,7 +186,7 @@ def collect(db, user, patient):
             if name == "patients"
             else (
                 table.c.user_id == user.id
-                if name in ("auth_sessions", "organization_memberships")
+                if name in ("auth_sessions", "password_reset_tokens", "organization_memberships")
                 else table.c.patient_id == patient.id
                 if "patient_id" in table.c
                 else None

@@ -4,8 +4,9 @@ import { useLanguage } from "@/components/LanguageProvider";
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { request, api } from "@/lib/api";
-import type { User, MedicalDocument, PatientProfile, DocumentType } from "@/types";
+import type { User, MedicalDocument, PatientCard, PatientProfile, DocumentType } from "@/types";
 import { DocumentCard } from "./DocumentCard";
+import { PatientDigitalCard } from "./DigitalCard";
 import { DocumentUploadModal } from "./DocumentUploadModal";
 import { formatDate } from "@/lib/utils";
 import { ClinicalWorkspace } from "./ClinicalWorkspace";
@@ -77,7 +78,15 @@ const field = "w-full rounded-lg border border-slate-300 bg-white p-2 text-sm";
 const button =
   "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700";
 
-export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser; section?: string }) {
+export function CareWorkspace({
+  user,
+  section = "sharing",
+  onProfileUpdated,
+}: {
+  user: CurrentUser;
+  section?: string;
+  onProfileUpdated?: (profile: PatientProfile) => void;
+}) {
   const { t } = useLanguage();
   const formId = useId();
   const [requests, setRequests] = useState<AccessRequest[]>([]);
@@ -91,6 +100,11 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
     owner: Person;
     items: MedicalDocument[];
     status: "loading" | "ready" | "failed";
+    error: string;
+  } | null>(null);
+  const [patientCard, setPatientCard] = useState<{
+    owner: Person;
+    card: PatientCard | null;
     error: string;
   } | null>(null);
   const [documentRefresh, setDocumentRefresh] = useState(0);
@@ -197,6 +211,28 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
   const selectedPatient = patients.find((person) => person.id === selected);
   useEffect(() => {
     if (user.role !== "doctor" || user.doctor?.verification_status !== "verified" || !selectedPatient) {
+      setPatientCard(null);
+      return;
+    }
+    const owner = selectedPatient;
+    const controller = new AbortController();
+    setPatientCard({ owner, card: null, error: "" });
+    api.patients
+      .getCard(owner.id, { signal: controller.signal })
+      .then((card) => {
+        if (controller.signal.aborted) return;
+        if (card.id !== owner.id) throw new Error("Patient card unavailable. Refresh patient access.");
+        setPatientCard({ owner, card, error: "" });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setPatientCard({ owner, card: null, error: "Patient card unavailable. Refresh patient access." });
+      });
+    return () => controller.abort();
+  }, [selectedPatient, user.role, user.doctor?.verification_status]);
+  const currentPatientCard = patientCard?.owner === selectedPatient ? patientCard : null;
+  useEffect(() => {
+    if (user.role !== "doctor" || user.doctor?.verification_status !== "verified" || !selectedPatient) {
       setDoctorDocuments(null);
       return;
     }
@@ -280,17 +316,17 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
                   className="mt-4 grid gap-4 md:grid-cols-2"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    void act(
-                      () =>
-                        api.patients.updateProfile({
-                          date_of_birth: profile.date_of_birth || null,
-                          gender: profile.gender || null,
-                          blood_group: profile.blood_group || null,
-                          emergency_contact: profile.emergency_contact || null,
-                          address: profile.address || null,
-                        }),
-                      "Profile updated.",
-                    );
+                    void act(async () => {
+                      const updated = await api.patients.updateProfile({
+                        date_of_birth: profile.date_of_birth || null,
+                        gender: profile.gender || null,
+                        blood_group: profile.blood_group || null,
+                        emergency_contact: profile.emergency_contact || null,
+                        address: profile.address || null,
+                      });
+                      setProfile(updated);
+                      onProfileUpdated?.(updated);
+                    }, "Profile updated.");
                   }}
                 >
                   <label className="text-sm">
@@ -633,6 +669,14 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
               {!patients.length && (
                 <p className="mt-3 text-sm text-slate-500">{t("No active patient grants.")}</p>
               )}
+              <button
+                type="button"
+                className={`${button} mt-3`}
+                disabled={busy || documentsLoading}
+                onClick={() => void act(undefined, "")}
+              >
+                {t("Refresh records")}
+              </button>
               {section === "patients" &&
                 patients.length > 0 &&
                 patientSearch &&
@@ -644,6 +688,24 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
                   </p>
                 )}
             </div>
+            {selectedPatient && (
+              <div className="ml-auto w-full max-w-[21rem] space-y-3">
+                {currentPatientCard?.card ? (
+                  <PatientDigitalCard key={selectedPatient.id} patient={currentPatientCard.card} />
+                ) : currentPatientCard?.error ? (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                  >
+                    {t(currentPatientCard.error)}
+                  </p>
+                ) : (
+                  <p role="status" className="text-sm text-slate-600">
+                    {t("Loading patient card…")}
+                  </p>
+                )}
+              </div>
+            )}
             <form
               hidden={section !== "patients"}
               className="grid gap-4 rounded-xl border bg-white p-5 md:grid-cols-2"
@@ -830,14 +892,6 @@ export function CareWorkspace({ user, section = "sharing" }: { user: CurrentUser
             )}
             {selectedPatient && (
               <div hidden={section !== "documents"} className="space-y-3">
-                <button
-                  type="button"
-                  className={button}
-                  disabled={busy || documentsLoading}
-                  onClick={() => void act(undefined, "")}
-                >
-                  {t("Refresh records")}
-                </button>
                 {documentsLoading && (
                   <p role="status" className="text-sm text-slate-600">
                     {t("Loading care workspace…")}

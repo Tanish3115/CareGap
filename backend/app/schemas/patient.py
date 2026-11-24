@@ -3,6 +3,14 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class PatientCard(BaseModel):
+    """Identity shared with an authorized clinician, without private profile fields."""
+
+    id: str
+    patient_code: str
+    full_name: str
+
+
 class PatientProfile(BaseModel):
     id: str
     patient_code: str

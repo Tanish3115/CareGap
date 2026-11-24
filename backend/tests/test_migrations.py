@@ -53,7 +53,7 @@ def test_language_migration_preserves_preferences_and_refuses_lossy_downgrade(tm
         command.downgrade(config, "0017")
     with engine.connect() as connection:
         assert connection.execute(text("SELECT language FROM notification_preferences")).scalar_one() == "kn"
-        # 0019 was safely removed before 0018 refused the lossy language downgrade.
+        # Later revisions were removed before 0018 refused the lossy language downgrade.
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0018"
     engine.dispose()
 
@@ -228,7 +228,7 @@ def test_legacy_adoption_backs_up_and_preserves_records(tmp_path, monkeypatch):
             connection.execute(text("SELECT full_name FROM users WHERE id='synthetic'")).scalar_one()
             == "Synthetic preservation test"
         )
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0019"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0020"
     engine.dispose()
 
 

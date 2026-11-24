@@ -1,6 +1,6 @@
 # CareGap 360
 
-Hosted application: **https://caregap360.vercel.app**. On 8 November 2026, the frontend/API, hosted administrator login/logout, Supabase database/private storage and Upstash Redis connectivity checks passed. This is a development hosting check, not clinical or production certification. Existing local records have not been migrated, and persistence across a Render restart has not yet been exercised. Hosting details are in [HOSTING_HANDOVER.md](docs/HOSTING_HANDOVER.md); GitHub commands and their meanings are in [GITHUB_COMMANDS.md](docs/GITHUB_COMMANDS.md).
+Hosted application: **https://caregap360.vercel.app**. On 8 November 2026, the frontend/API, hosted administrator login/logout, Supabase database/private storage and Upstash Redis connectivity checks passed. This is a development hosting check, not clinical or production certification. Existing local records have not been migrated, and persistence across a Render restart has not yet been exercised. Hosting details are in [HOSTING_HANDOVER.md](docs/HOSTING_HANDOVER.md); the digital-card/password-recovery release and live email settings are in [HOSTING_UPDATE.md](docs/HOSTING_UPDATE.md). GitHub commands and their meanings are in [GITHUB_COMMANDS.md](docs/GITHUB_COMMANDS.md).
 
 Patient-controlled medical documents and care-continuity workflows, with source history, scoped sharing and professional verification. Use synthetic data only until the required clinical, privacy, security and operational reviews are completed.
 
@@ -18,11 +18,13 @@ Patients can delete uploaded documents, consultations, individual follow-ups, me
 
 The medication comparison now supports a disabled-by-default [approved offline pair-evidence adapter](docs/APPROVED_KNOWLEDGE.md), with pinned data, current reviewed coding and explicit coverage gaps. [Offline extraction evaluation](docs/EXTRACTION_VALIDATION.md) provides reproducible field/error metrics for synthetic or independently approved annotated cases. Neither mechanism supplies clinical approval or a safety clearance.
 
-Language choices: **Kannada, Telugu, Tamil, Malayalam, English and Hindi**. Each translated interface catalog covers all 1039 reference entries. Clinical source text stays unchanged. Native clinical-language review remains a deployment requirement. See [language coverage](docs/LOCALIZATION.md).
+Language choices: **Kannada, Telugu, Tamil, Malayalam, English and Hindi**. Each translated interface catalog covers all 1082 reference entries. Clinical source text stays unchanged. Native clinical-language review remains a deployment requirement. See [language coverage](docs/LOCALIZATION.md).
 
 - Patient and pending-doctor registration; bcrypt passwords; expiring JWT sessions with server-side revocation.
+- Login-page **Forgot password?**, email recovery and new-password forms. Reset links expire, work once and revoke existing sessions on use. Hosted delivery requires a configured email provider; development uses a private file outbox. See [password recovery setup](docs/PASSWORD_RECOVERY.md).
 - Browser authentication using HttpOnly, SameSite cookies. Credentials are not stored in localStorage.
 - Patient profile viewing/editing, including date of birth and clearing optional fields.
+- Digital cards visible immediately on patient and doctor dashboards. Patient cards show the sharing ID and recorded profile details, with a copy-ID control and profile editing. Doctor cards show professional details and the current verification status. Verified doctors can view an authorized patient's identity card under active consent; private profile details are not added to their sharing scope.
 - PDF/JPG/PNG uploads with actual content validation, size limits, source metadata and SHA-256 checks on download.
 - Patient-owned record library with search, category filters, authenticated downloads and explicit unverified status.
 - Verified doctor access requests with purpose, duration, document category and optional upload permission.

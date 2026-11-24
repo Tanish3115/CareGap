@@ -8,7 +8,7 @@ export default defineConfig({
   timeout: 60000,
   use: { baseURL: "http://127.0.0.1:3100", trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: [
-    { command: `"${python}" "${path.resolve("../scripts/e2e_backend.py")}"`, url: "http://127.0.0.1:8100/health", timeout: 120000, reuseExistingServer: false },
+    { command: `"${python}" "${path.resolve("../scripts/e2e_backend.py")}"`, url: "http://127.0.0.1:8100/health", timeout: 120000, reuseExistingServer: false, env: { CAREGAP_E2E_RESET_OUTBOX: path.resolve(".tools/e2e-reset-mail") } },
     { command: "node node_modules/next/dist/bin/next dev --webpack -p 3100 -H 127.0.0.1", url: "http://127.0.0.1:3100", timeout: 120000, reuseExistingServer: false, env: { API_PROXY_TARGET: "http://127.0.0.1:8100", NEXT_DIST_DIR: ".next-e2e" } },
   ],
 });

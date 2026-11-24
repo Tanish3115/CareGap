@@ -11,6 +11,7 @@ from app.models.processing import DocumentProcessingJob
 from app.models.document import MedicalDocument
 from app.models.audit import AuditLog
 from app.models.session import AuthSession
+from app.models.password_reset import PasswordResetToken
 from app.models.health_record import HealthRecord, HealthRevision, HealthSource
 from app.services.storage_service import storage_service
 from app.core.time import utc_now
@@ -70,6 +71,9 @@ def test_erasure_plan_and_execution_remove_only_the_approved_patient_graph(
     )
     create_use(client, patient_token, target)
     other_id, other_email = second_patient_user.id, second_patient_user.email
+    for owner, digest_value in ((patient_user, "a" * 64), (second_patient_user, "b" * 64)):
+        db_session.add(PasswordResetToken(token_hash=digest_value, user_id=owner.id, expires_at=utc_now()))
+    db_session.commit()
     stored = db_session.get(MedicalDocument, doc["id"])
     source_path = storage_service.resolve(stored.file_path)
     request, policy = setup_request(db_session, patient_user)
@@ -78,6 +82,7 @@ def test_erasure_plan_and_execution_remove_only_the_approved_patient_graph(
     assert source_path.is_file() and db_session.get(Patient, target) is not None  # Planning is read-only.
     assert plan["snapshot"]["prescription_revisions"]["count"] == 2
     assert plan["snapshot"]["health_sources"]["count"] == 1
+    assert plan["snapshot"]["password_reset_tokens"]["count"] == 1
     receipt = execute_plan(db_session, plan, digest(plan), patient_user.id, True, tmp_path / "progress.json")
     db_session.expire_all()
     assert not source_path.exists() and db_session.get(Patient, target) is None
@@ -90,6 +95,8 @@ def test_erasure_plan_and_execution_remove_only_the_approved_patient_graph(
         and not archived.is_active
     )
     assert db_session.query(AuthSession).filter_by(user_id=archived.id).count() == 0
+    assert db_session.query(PasswordResetToken).filter_by(user_id=archived.id).count() == 0
+    assert db_session.query(PasswordResetToken).filter_by(user_id=other_id).count() == 1
     assert db_session.get(User, other_id).email == other_email and db_session.get(User, other_id).is_active
     assert db_session.query(AuditLog).filter_by(patient_id=target).count() == 0
     assert db_session.query(AuditLog).filter_by(action="EXECUTE_APPROVED_ERASURE").count() == 1

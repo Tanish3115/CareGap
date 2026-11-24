@@ -34,6 +34,22 @@ class UserLogin(BaseModel):
     password: str
 
 
+class PasswordResetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr = Field(max_length=255)
+
+
+class PasswordResetConfirm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
+    password: str = Field(min_length=12, max_length=72)
+
+    @field_validator("password")
+    @classmethod
+    def password_byte_limit(cls, value: str) -> str:
+        return UserRegister.password_byte_limit(value)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

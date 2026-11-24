@@ -5,6 +5,7 @@ from app.models.document import MedicalDocument, DocumentType, DocumentStatus
 from app.models.consent import ConsentGrant, ConsentScope
 from app.models.audit import AuditLog, AuditAction
 from app.models.session import AuthSession
+from app.models.password_reset import PasswordResetToken
 from app.models.access_request import AccessRequest
 from app.models.verification import DoctorVerification
 from app.models.clinical import Encounter, EncounterRevision, EncounterSource, FollowUpTask, FollowUpRevision
@@ -45,6 +46,7 @@ __all__ = [
     "FollowUpTask",
     "FollowUpRevision",
     "AuthSession",
+    "PasswordResetToken",
     "AccessRequest",
     "DoctorVerification",
     "User",

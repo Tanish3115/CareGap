@@ -46,9 +46,7 @@ def check(path):
             from app.config import Settings
             from app.hosted import validate_hosted
 
-            configured = {
-                key: value for key, value in values.items() if value is not None
-            }
+            configured = {key: value for key, value in values.items() if value is not None}
             configured["CORS_ORIGINS"] = json.loads(configured["CORS_ORIGINS"])
             settings = Settings(_env_file=None, **configured)
             validate_hosted(settings)

@@ -1,5 +1,7 @@
 # Hosting preparation — 2 November 2026
 
+For the digital cards and password recovery release prepared on 24 November 2026, use [HOSTING_UPDATE.md](HOSTING_UPDATE.md). That guide distinguishes local preparation from publication and live deployment, and lists the hosted email settings.
+
 Prepared locally for **Vercel (Next.js) + Render (FastAPI, OCR worker and cleanup worker) + Supabase (PostgreSQL and private object storage)**. Production configuration additionally requires **Upstash Redis or another TLS Redis service** for shared rate limiting.
 
 **Current status, 8 November 2026:** application source is published on `main`, and the user deployed the persistent-data configuration at https://caregap360.vercel.app. Public frontend/API checks returned 200, with demo mode disabled. Direct checks confirmed Supabase connectivity/schema `0019`, a private bucket, authenticated synthetic-file upload/download integrity, anonymous-download rejection and Redis PING. Hosted administrator login, cookie session, logout and subsequent denial passed; the synthetic storage probe was removed. Credentials and operational helper files remain private under `.tools/hosting/20261107T181040Z/`. No existing local records were migrated. Render-restart persistence, complete hosted browser/OCR workflows and independent deployment reviews have not been claimed as tested.

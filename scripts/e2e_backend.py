@@ -20,6 +20,9 @@ with tempfile.TemporaryDirectory(prefix="caregap-e2e-") as directory:
         STORAGE_BACKEND="local",
         RATE_LIMIT_STORAGE_URI="memory://",
         CORS_ORIGINS='["http://127.0.0.1:3100"]',
+        PASSWORD_RESET_DELIVERY="local",
+        PASSWORD_RESET_BASE_URL="http://127.0.0.1:3100",
+        PASSWORD_RESET_OUTBOX_DIR=os.environ.get("CAREGAP_E2E_RESET_OUTBOX", str(Path(directory) / "mail")),
     )
     from alembic import command
     from alembic.config import Config

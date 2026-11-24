@@ -42,9 +42,7 @@ def main():
         check=False,
     )
     if response.returncode:
-        raise SystemExit(
-            "Read-only inventory failed; private diagnostics were not printed"
-        )
+        raise SystemExit("Read-only inventory failed; private diagnostics were not printed")
     inventory = json.loads(response.stdout)
     raw = (json.dumps(inventory, indent=2) + "\n").encode()
     target.parent.mkdir(parents=True, exist_ok=True)

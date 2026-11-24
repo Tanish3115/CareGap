@@ -25,13 +25,9 @@ def prepare():
     folder = ROOT / ".tools/hosting" / datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     folder.mkdir(parents=True, exist_ok=False)
     render = (ROOT / "infra/hosting/render.env.example").read_text(encoding="utf-8")
-    render = render.replace(
-        "SECRET_KEY=\n", "SECRET_KEY=" + secrets.token_urlsafe(48) + "\n"
-    )
+    render = render.replace("SECRET_KEY=\n", "SECRET_KEY=" + secrets.token_urlsafe(48) + "\n")
     private_write(folder / "render.env", render.encode())
-    private_write(
-        folder / "vercel.env", (ROOT / "infra/hosting/vercel.env.example").read_bytes()
-    )
+    private_write(folder / "vercel.env", (ROOT / "infra/hosting/vercel.env.example").read_bytes())
     tables = sorted({*Base.metadata.tables, "alembic_version"})
     statements = [
         "-- Run only on the dedicated target project AFTER CareGap migrations.",
@@ -57,9 +53,7 @@ def prepare():
         "deployed": False,
         "data_transferred": False,
         "table_count": len(tables),
-        "files": {
-            p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.iterdir()
-        },
+        "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.iterdir()},
     }
     private_write(
         folder / "preparation-manifest.json",

@@ -67,6 +67,33 @@ summary {
   background: #edf5ef;
   border: 1px solid #d6e5d9;
 }
+.digital-card {
+  width: 100%;
+  max-width: 21rem;
+  margin-left: auto;
+}
+.digital-card-face {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 7 / 4;
+  overflow: hidden;
+  padding: 0.875rem;
+  border: 1px solid #bddace;
+  border-left: 4px solid #17695d;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, #ffffff, #edf8f2);
+  box-shadow: 0 3px 12px #173c350a;
+}
+@media (max-width: 374px) {
+  .digital-card-face {
+    padding: 0.625rem;
+  }
+  .digital-card-face > :not(:first-child) {
+    margin-top: 0.25rem;
+  }
+}
 .patient-welcome h2 {
   font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1.25;

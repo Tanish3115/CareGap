@@ -35,6 +35,7 @@ backend/caregap360.db
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
 backend/storage/backups/
+backend/storage/password-reset-outbox/
 
 # Environment variables
 .env

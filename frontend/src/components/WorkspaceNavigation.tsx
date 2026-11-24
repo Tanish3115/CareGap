@@ -130,11 +130,13 @@ export function WorkspaceNavigation({
   userRole,
   section,
   onSection,
+  accountCard,
   children,
 }: {
   userRole: string;
   section: string;
   onSection: (value: string) => void;
+  accountCard?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useLanguage();
@@ -243,18 +245,23 @@ export function WorkspaceNavigation({
         </div>
       </aside>
       <main id="workspace-content" className="min-w-0 px-4 py-6 sm:px-7 lg:p-9">
-        <div className="mb-7 border-b border-slate-200 pb-6">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-blue-700">
-            {t("CareGap")} <span aria-hidden="true">/</span> {t(userRole)}
-          </p>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-2xl font-bold tracking-tight text-slate-900 outline-none sm:text-3xl"
-          >
-            {t(current.label)}
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">{t(current.description)}</p>
+        <div className="mb-7 flex flex-col justify-between gap-5 border-b border-slate-200 pb-6 md:flex-row md:items-start">
+          <div className="min-w-0 md:flex-1">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-blue-700">
+              {t("CareGap")} <span aria-hidden="true">/</span> {t(userRole)}
+            </p>
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="text-2xl font-bold tracking-tight text-slate-900 outline-none sm:text-3xl"
+            >
+              {t(current.label)}
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">{t(current.description)}</p>
+          </div>
+          {accountCard && (
+            <div className="w-full max-w-[21rem] self-end md:shrink-0 md:self-start">{accountCard}</div>
+          )}
         </div>
         {children}
       </main>

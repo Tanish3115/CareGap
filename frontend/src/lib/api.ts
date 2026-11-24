@@ -1,4 +1,12 @@
-import type { AuthResponse, MedicalDocument, PatientProfile, PatientStats, User } from "@/types";
+import type {
+  AuthResponse,
+  DoctorProfile,
+  MedicalDocument,
+  PatientCard,
+  PatientProfile,
+  PatientStats,
+  User,
+} from "@/types";
 
 export async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
@@ -24,12 +32,20 @@ export const api = {
   auth: {
     login: (data: { email: string; password: string }) =>
       request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+    forgotPassword: (email: string) =>
+      request<{ message: string; delivery: "local" | "email" }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, password: string) =>
+      request<{ message: string }>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, password }),
+      }),
     register: (data: Record<string, unknown>) =>
       request<User>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
-    me: () =>
-      request<User & { patient?: PatientProfile; doctor?: { id: string; verification_status: string } }>(
-        "/auth/me",
-      ),
+    me: (options: Pick<RequestInit, "signal"> = {}) =>
+      request<User & { patient?: PatientProfile; doctor?: DoctorProfile }>("/auth/me", options),
     logout: () => request<void>("/auth/logout", { method: "POST" }),
   },
   documents: {
@@ -59,7 +75,10 @@ export const api = {
     },
   },
   patients: {
-    getProfile: () => request<PatientProfile>("/patients/me"),
+    getProfile: (options: Pick<RequestInit, "signal"> = {}) =>
+      request<PatientProfile>("/patients/me", options),
+    getCard: (patientId: string, options: Pick<RequestInit, "signal"> = {}) =>
+      request<PatientCard>(`/patients/${encodeURIComponent(patientId)}/card`, options),
     updateProfile: (data: Record<string, unknown>) =>
       request<PatientProfile>("/patients/me", { method: "PUT", body: JSON.stringify(data) }),
     getStats: () => request<PatientStats>("/patients/summary/stats"),

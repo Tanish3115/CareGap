@@ -1,5 +1,5 @@
 from app.core.time import utc_now
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request, Response
 from app.config import settings
 from app.services.session_service import issue_session
 from app.models.session import AuthSession
@@ -12,11 +12,59 @@ from app.core.security import hash_password, verify_password
 from app.models.user import User, UserRole
 from app.models.doctor import Doctor, DoctorVerificationStatus
 from app.models.audit import AuditAction
-from app.schemas.auth import UserRegister, UserLogin, TokenResponse, UserOut
+from app.schemas.auth import (
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    UserOut,
+)
+from app.services.password_reset import (
+    DELIVERY_UNAVAILABLE,
+    LOCAL_REQUEST_MESSAGE,
+    REQUEST_MESSAGE,
+    deliver_password_reset,
+    delivery_mode,
+    reset_password,
+)
 from app.services.audit_service import audit_service
 from app.services.patient_service import create_patient_profile
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.post("/forgot-password", status_code=202)
+@limiter.limit("5/minute;20/hour")
+def forgot_password(
+    payload: PasswordResetRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    if delivery_mode() == "disabled":
+        raise HTTPException(503, DELIVERY_UNAVAILABLE)
+    background_tasks.add_task(deliver_password_reset, str(payload.email).lower(), db.get_bind())
+    local = delivery_mode() == "local"
+    return {
+        "message": LOCAL_REQUEST_MESSAGE if local else REQUEST_MESSAGE,
+        "delivery": "local" if local else "email",
+    }
+
+
+@router.post("/reset-password")
+@limiter.limit("10/minute")
+def confirm_password_reset(
+    payload: PasswordResetConfirm,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    reset_password(db, payload.token, payload.password)
+    response.delete_cookie(
+        "caregap_session", path="/", secure=settings.COOKIE_SECURE, httponly=True, samesite="strict"
+    )
+    return {"message": "Your password has been reset. Sign in with your new password."}
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)

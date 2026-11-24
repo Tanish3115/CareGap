@@ -10,6 +10,7 @@ from app.api.deps import get_current_user, get_db, require_role
 from app.core.time import utc_now
 from app.models.user import User, UserRole
 from app.models.session import AuthSession
+from app.models.password_reset import PasswordResetToken
 from app.models.doctor import Doctor
 from app.models.consent import ConsentGrant
 from app.models.operations import Organization, OrganizationMembership, OrganizationHistory, PrivacyRequest
@@ -300,6 +301,11 @@ def activation(user_id: UUID, payload: Activation, admin=Depends(admin_dep), db:
             update(AuthSession)
             .where(AuthSession.user_id == target.id, AuthSession.revoked_at.is_(None))
             .values(revoked_at=utc_now())
+        )
+        db.execute(
+            update(PasswordResetToken)
+            .where(PasswordResetToken.user_id == target.id, PasswordResetToken.used_at.is_(None))
+            .values(used_at=utc_now())
         )
     audit_service.log_event(db, "CHANGE_USER_ACTIVATION", "user", actor_id=admin.id, resource_id=target.id)
     return dict(id=target.id, active=payload.active, sessions_revoked=not payload.active)

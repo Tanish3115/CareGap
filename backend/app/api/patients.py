@@ -1,13 +1,15 @@
 from app.core.time import utc_now
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from app.models.consent import ConsentGrant
 from app.services.audit_service import audit_service
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_patient
+from app.api.deps import get_db, get_current_patient, get_current_user
+from app.core.errors import ResourceNotFoundException
 from app.models.user import User
 from app.models.patient import Patient
 from app.models.document import MedicalDocument, DocumentType
-from app.schemas.patient import PatientProfile, PatientProfileUpdate
+from app.schemas.patient import PatientCard, PatientProfile, PatientProfileUpdate
+from app.services.authorization import permitted_types
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
@@ -110,3 +112,26 @@ def get_patient_summary_stats(
         )
         .count(),
     }
+
+
+@router.get("/{patient_id}/card", response_model=PatientCard)
+def get_patient_card(
+    patient_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Authorize before lookup so a guessed ID cannot disclose patient existence.
+    permitted_types(db, user, patient_id, request)
+    patient = db.get(Patient, patient_id)
+    if not patient:
+        raise ResourceNotFoundException("Patient")
+    audit_service.log_event(
+        db,
+        "VIEW_RECORD",
+        "patient_card",
+        actor_id=user.id,
+        patient_id=patient.id,
+        resource_id=patient.id,
+    )
+    return PatientCard(id=patient.id, patient_code=patient.patient_code, full_name=patient.user.full_name)

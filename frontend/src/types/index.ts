@@ -25,6 +25,16 @@ export interface PatientProfile {
   created_at: string;
 }
 
+export type PatientCard = Pick<PatientProfile, "id" | "patient_code" | "full_name">;
+
+export interface DoctorProfile {
+  id: string;
+  license_number: string;
+  specialization: string;
+  hospital_affiliation?: string | null;
+  verification_status: "pending" | "verified" | "rejected";
+}
+
 export type DocumentType =
   | "prescription"
   | "lab_report"

@@ -16,6 +16,14 @@ services:
         value: "false"
       - key: COOKIE_SECURE
         value: "true"
+      - key: PASSWORD_RESET_DELIVERY
+        sync: false
+      - key: PASSWORD_RESET_BASE_URL
+        sync: false
+      - key: PASSWORD_RESET_FROM_EMAIL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
       - key: STORAGE_BACKEND
         value: s3
       - key: S3_PROVIDER

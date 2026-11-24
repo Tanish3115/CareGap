@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Literal
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import EmailStr, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,20 @@ class Settings(BaseSettings):
     LOCAL_VOLUME_ENCRYPTION_VERIFIED: bool = False
     ALGORITHM: Literal["HS256"] = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    # Unset uses a private file outbox in development/test and disables delivery in production.
+    PASSWORD_RESET_DELIVERY: Literal["disabled", "local", "smtp", "resend"] | None = None
+    PASSWORD_RESET_BASE_URL: str = "http://localhost:3000"
+    PASSWORD_RESET_TOKEN_MINUTES: int = Field(default=30, ge=5, le=60)
+    PASSWORD_RESET_OUTBOX_DIR: str = str(
+        Path(__file__).resolve().parent.parent / "storage" / "password-reset-outbox"
+    )
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = Field(default=587, ge=1, le=65535)
+    SMTP_SECURITY: Literal["starttls", "tls"] = "starttls"
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: SecretStr = SecretStr("")
+    PASSWORD_RESET_FROM_EMAIL: EmailStr | None = None
+    RESEND_API_KEY: SecretStr = SecretStr("")
     SUMMARY_PROVIDER: Literal["extractive", "http"] = "extractive"
     SUMMARY_PROVIDER_URL: str = ""
     SUMMARY_PROVIDER_TOKEN: SecretStr = SecretStr("")
@@ -77,6 +91,42 @@ class Settings(BaseSettings):
     @classmethod
     def empty_encryption_mode(cls, value):
         return None if value == "" else value
+
+    @field_validator("PASSWORD_RESET_FROM_EMAIL", mode="before")
+    @classmethod
+    def empty_sender(cls, value):
+        return None if value == "" else value
+
+    @model_validator(mode="after")
+    def validate_password_reset_delivery(self):
+        from urllib.parse import urlsplit
+
+        url = urlsplit(self.PASSWORD_RESET_BASE_URL)
+        if (
+            url.scheme not in ("http", "https")
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.query
+            or url.fragment
+            or url.path not in ("", "/")
+        ):
+            raise ValueError("Password reset links require an explicit frontend origin")
+        if self.ENVIRONMENT == "production" and self.PASSWORD_RESET_DELIVERY == "local":
+            raise ValueError("Production cannot use the local password reset outbox")
+        if self.PASSWORD_RESET_DELIVERY in ("smtp", "resend"):
+            if not self.PASSWORD_RESET_FROM_EMAIL:
+                raise ValueError("Password recovery requires a sender email")
+            if self.ENVIRONMENT == "production" and url.scheme != "https":
+                raise ValueError("Production password reset links require HTTPS")
+        if self.PASSWORD_RESET_DELIVERY == "resend" and not self.RESEND_API_KEY.get_secret_value():
+            raise ValueError("Resend password recovery requires a private API key")
+        if self.PASSWORD_RESET_DELIVERY == "smtp":
+            if not self.SMTP_HOST.strip():
+                raise ValueError("SMTP password recovery requires a host and sender email")
+            if self.SMTP_USERNAME and not self.SMTP_PASSWORD.get_secret_value():
+                raise ValueError("Authenticated SMTP requires a private password")
+        return self
 
     @model_validator(mode="after")
     def validate_summary_provider(self):
