@@ -1,4 +1,6 @@
 .env*
+**/client_secret_*.json
+**/caregap-gmail-*.env
 .venv
 venv
 __pycache__

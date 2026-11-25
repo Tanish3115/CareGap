@@ -62,6 +62,7 @@ def package():
             for path in (ROOT / directory).rglob("*")
             if path.is_file()
             and path.suffix in extensions
+            and not path.match("client_secret_*.json")
             and "__pycache__" not in path.parts
             and ".pytest_cache" not in path.parts
         )

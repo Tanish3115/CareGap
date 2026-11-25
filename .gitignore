@@ -47,6 +47,7 @@ backend/storage/password-reset-outbox/
 *.env
 
 # Private credentials, local archives and database sidecars
+client_secret_*.json
 .aws/
 .codex/
 *.zip

@@ -22,8 +22,8 @@ services:
         sync: false
       - key: PASSWORD_RESET_FROM_EMAIL
         sync: false
-      - key: RESEND_API_KEY
-        sync: false
+      # Import only the selected provider's secrets in this service's Environment.
+      # For Gmail, scripts/authorize_gmail.py prepares the values for import.
       - key: STORAGE_BACKEND
         value: s3
       - key: S3_PROVIDER

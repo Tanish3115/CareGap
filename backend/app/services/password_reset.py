@@ -8,6 +8,7 @@ import smtplib
 import ssl
 from datetime import timedelta
 from email.message import EmailMessage
+from html import escape
 from pathlib import Path
 from uuid import uuid4
 
@@ -23,6 +24,7 @@ from app.models.password_reset import PasswordResetToken
 from app.models.session import AuthSession
 from app.models.user import User
 from app.services.audit_service import audit_service
+from app.services.gmail_delivery import send_gmail
 
 REQUEST_MESSAGE = "If an active account exists for this email, a password reset link will be sent."
 LOCAL_REQUEST_MESSAGE = "If an active account exists for this email, its reset message will be saved locally. This development app does not send email."
@@ -55,6 +57,16 @@ def send_reset_email(recipient, token):
         cte="7bit",
     )
     mode = delivery_mode()
+    if mode == "gmail":
+        message.add_alternative(
+            "<p>A password reset was requested for your CareGap 360 account.</p>"
+            f'<p><a href="{escape(link, quote=True)}">Reset your CareGap 360 password</a></p>'
+            f"<p>This link works once and expires in {settings.PASSWORD_RESET_TOKEN_MINUTES} minutes.</p>"
+            "<p>If you didn't request this change, you can ignore this email.</p>",
+            subtype="html",
+        )
+        send_gmail(message)
+        return
     if mode == "local" and settings.ENVIRONMENT != "production":
         outbox = Path(settings.PASSWORD_RESET_OUTBOX_DIR)
         outbox.mkdir(parents=True, exist_ok=True)
@@ -147,9 +159,13 @@ def deliver_password_reset(email, bind):
                 )
                 db.commit()
                 raise
+            if delivery_mode() == "gmail":
+                audit_service.log_event(
+                    db, "PASSWORD_RESET_EMAIL_ACCEPTED", "auth", actor_id=user_id, details="gmail"
+                )
     except Exception:
         # Provider errors can contain credentials, recipient addresses or URLs.
-        logging.getLogger("caregap.password_reset").error("Password reset delivery failed")
+        logging.getLogger("caregap.password_reset").error("Password reset request could not be completed")
 
 
 def reset_password(db, token, password):

@@ -5,6 +5,8 @@
 .aws
 **/.env
 **/.env.*
+**/client_secret_*.json
+**/caregap-gmail-*.env
 **/*.db
 **/*.sqlite*
 **/__pycache__

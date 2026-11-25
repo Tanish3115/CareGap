@@ -23,16 +23,19 @@ def email_settings(api_key, sender, origin):
         or not all(character.isascii() and (character.isalnum() or character in "_-") for character in key)
     ):
         raise ValueError("Enter a complete Resend API key. No settings were changed.")
+    return {**delivery_settings("resend", sender, origin), "RESEND_API_KEY": key}
+
+
+def delivery_settings(mode, sender, origin):
     address = str(TypeAdapter(EmailStr).validate_python(sender.strip()))
     normalized = str(TypeAdapter(HttpUrl).validate_python(origin.strip()))
     parsed = urlsplit(normalized)
     if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path != "/":
         raise ValueError("Enter only the frontend origin, without a path or credentials.")
     return {
-        "PASSWORD_RESET_DELIVERY": "resend",
+        "PASSWORD_RESET_DELIVERY": mode,
         "PASSWORD_RESET_BASE_URL": normalized.rstrip("/"),
         "PASSWORD_RESET_FROM_EMAIL": address,
-        "RESEND_API_KEY": key,
     }
 
 

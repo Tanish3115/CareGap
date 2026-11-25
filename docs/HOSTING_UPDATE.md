@@ -10,7 +10,9 @@ The target is the existing app at https://caregap360.vercel.app, using the persi
 
 ## Configure mail in Render
 
-In the **existing persistent backend service → Environment**, add these four values. Preserve all existing database, storage, Redis, session and CORS settings.
+For a **Gmail sender**, authorize one mailbox with the setup command and import its six settings into the existing persistent Render backend. Deploy the latest `main` commit, then request a fresh link for a registered test account. [Gmail setup and delivery verification](PASSWORD_RECOVERY.md#send-reset-links-with-gmail-on-render)
+
+For a **Resend sender**, add the following four values in the existing backend service's **Environment** settings.
 
 ```dotenv
 PASSWORD_RESET_DELIVERY=resend

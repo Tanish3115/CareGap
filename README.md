@@ -21,7 +21,7 @@ The medication comparison now supports a disabled-by-default [approved offline p
 Language choices: **Kannada, Telugu, Tamil, Malayalam, English and Hindi**. Each translated interface catalog covers all 1082 reference entries. Clinical source text stays unchanged. Native clinical-language review remains a deployment requirement. See [language coverage](docs/LOCALIZATION.md).
 
 - Patient and pending-doctor registration; bcrypt passwords; expiring JWT sessions with server-side revocation.
-- Login-page **Forgot password?**, email recovery and new-password forms. Reset links expire, work once and revoke existing sessions on use. Hosted delivery requires a configured email provider; development uses a private file outbox. See [password recovery setup](docs/PASSWORD_RECOVERY.md).
+- **Forgot password?** sends a single-use reset link through an authorized Gmail mailbox, Resend or SMTP. Changing the password signs out existing sessions. Development defaults to a private file outbox. [Gmail setup on Render](docs/PASSWORD_RECOVERY.md#send-reset-links-with-gmail-on-render)
 - Browser authentication using HttpOnly, SameSite cookies. Credentials are not stored in localStorage.
 - Patient profile viewing/editing, including date of birth and clearing optional fields.
 - Digital cards visible immediately on patient and doctor dashboards. Patient cards show the sharing ID and recorded profile details, with a copy-ID control and profile editing. Doctor cards show professional details and the current verification status. Verified doctors can view an authorized patient's identity card under active consent; private profile details are not added to their sharing scope.

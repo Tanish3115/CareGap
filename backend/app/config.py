@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ALGORITHM: Literal["HS256"] = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     # Unset uses a private file outbox in development/test and disables delivery in production.
-    PASSWORD_RESET_DELIVERY: Literal["disabled", "local", "smtp", "resend"] | None = None
+    PASSWORD_RESET_DELIVERY: Literal["disabled", "local", "smtp", "resend", "gmail"] | None = None
     PASSWORD_RESET_BASE_URL: str = "http://localhost:3000"
     PASSWORD_RESET_TOKEN_MINUTES: int = Field(default=30, ge=5, le=60)
     PASSWORD_RESET_OUTBOX_DIR: str = str(
@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: SecretStr = SecretStr("")
     PASSWORD_RESET_FROM_EMAIL: EmailStr | None = None
     RESEND_API_KEY: SecretStr = SecretStr("")
+    GMAIL_CLIENT_ID: str = ""
+    GMAIL_CLIENT_SECRET: SecretStr = SecretStr("")
+    GMAIL_REFRESH_TOKEN: SecretStr = SecretStr("")
     SUMMARY_PROVIDER: Literal["extractive", "http"] = "extractive"
     SUMMARY_PROVIDER_URL: str = ""
     SUMMARY_PROVIDER_TOKEN: SecretStr = SecretStr("")
@@ -114,13 +117,21 @@ class Settings(BaseSettings):
             raise ValueError("Password reset links require an explicit frontend origin")
         if self.ENVIRONMENT == "production" and self.PASSWORD_RESET_DELIVERY == "local":
             raise ValueError("Production cannot use the local password reset outbox")
-        if self.PASSWORD_RESET_DELIVERY in ("smtp", "resend"):
+        if self.PASSWORD_RESET_DELIVERY in ("smtp", "resend", "gmail"):
             if not self.PASSWORD_RESET_FROM_EMAIL:
                 raise ValueError("Password recovery requires a sender email")
             if self.ENVIRONMENT == "production" and url.scheme != "https":
                 raise ValueError("Production password reset links require HTTPS")
         if self.PASSWORD_RESET_DELIVERY == "resend" and not self.RESEND_API_KEY.get_secret_value():
             raise ValueError("Resend password recovery requires a private API key")
+        if self.PASSWORD_RESET_DELIVERY == "gmail" and not all(
+            (
+                self.GMAIL_CLIENT_ID.strip(),
+                self.GMAIL_CLIENT_SECRET.get_secret_value().strip(),
+                self.GMAIL_REFRESH_TOKEN.get_secret_value().strip(),
+            )
+        ):
+            raise ValueError("Gmail recovery requires an OAuth client ID, client secret and refresh token")
         if self.PASSWORD_RESET_DELIVERY == "smtp":
             if not self.SMTP_HOST.strip():
                 raise ValueError("SMTP password recovery requires a host and sender email")

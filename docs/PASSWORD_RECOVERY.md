@@ -4,7 +4,26 @@ The login screen links to **Forgot password?** (`/forgot-password`). A user supp
 
 Request responses do not reveal whether an account exists or is active. Account lookup and delivery run in a background task after the generic response. The response reports `delivery: "local"` or `delivery: "email"` identically for known and unknown accounts. Local mode explicitly says no inbox email is being sent, and the UI displays the corresponding local-development notice instead of “Check your email.” No reset link or token is returned by the API. Requests are limited to five per minute and twenty per hour per IP; repeated mail to an account has a one-minute cooldown. Existing links remain valid when another is requested, until one is used or expires.
 
-## First email setup
+## Send reset links with Gmail on Render
+
+CareGap sends from one Gmail or Google Workspace mailbox authorized by the app operator. Patients, doctors and administrators request a link for the address already registered with CareGap. The backend uses Google's HTTPS Gmail API, which works on Render's free tier with its SMTP port restrictions. [Gmail sending guide](https://developers.google.com/workspace/gmail/api/guides/sending) · [Render free web services](https://render.com/docs/free#outbound-smtp-traffic)
+
+1. In the CareGap Google Cloud project, enable the Gmail API. Under **Google Auth Platform**, configure the app's branding and audience and add the `https://www.googleapis.com/auth/gmail.send` scope under **Data Access**. If your app is in external Testing, add the sender mailbox as a test user. [Enable Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) · [Google consent setup](https://developers.google.com/workspace/guides/configure-oauth-consent) · [Gmail scope permissions](https://developers.google.com/workspace/gmail/api/auth/scopes)
+2. Under **Clients**, create a **Desktop app** OAuth client for the setup command. Download its JSON to a private location outside the repository. [Create a desktop client](https://developers.google.com/workspace/guides/create-credentials#desktop-app)
+3. From the CareGap repository, run the command below with the downloaded file's path. Enter the sending address and approve sending in Google's browser window using that mailbox. The setup command uses Google's OAuth library with a loopback callback and PKCE. [Google desktop OAuth flow](https://developers.google.com/identity/protocols/oauth2/native-app)
+
+   ```powershell
+   uv run scripts/authorize_gmail.py "C:\path\to\your-google-client.json"
+   ```
+
+4. The command prints the path of a private temporary `.env` file. In the **existing Render backend → Environment**, import its six settings. Update the matching keys if they already exist. Choose **Save only**, then **Manual Deploy → Deploy latest commit** from `main`. If the Gmail release already runs on Render, **Save and deploy** applies the settings to it. Remove the temporary file after the import. [Render environment settings](https://render.com/docs/configure-environment-variables)
+5. Request a fresh link using a registered test account. A successful Google submission records `PASSWORD_RESET_EMAIL_ACCEPTED` with provider `gmail` after Gmail returns a message ID. Confirm receipt in the mailbox, follow **Reset your CareGap 360 password**, and sign in with the new password. An expired or reused link prompts for a new request. [Open CareGap password recovery](https://caregap360.vercel.app/forgot-password)
+
+The generated settings are `PASSWORD_RESET_DELIVERY=gmail`, `PASSWORD_RESET_BASE_URL=https://caregap360.vercel.app`, `PASSWORD_RESET_FROM_EMAIL` and the three backend credentials `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`. Pass `--origin https://your-frontend.example` to the setup command if you host the frontend elsewhere. Keep these settings on the backend. After permission revocation, repeat the grant and update Render. A Google external Testing grant with this scope normally expires after seven days. For ongoing service use the appropriate Google production or Workspace internal audience and obtain a fresh grant. [Google refresh-token lifetime](https://developers.google.com/identity/protocols/oauth2#expiration)
+
+If a request produces no mail, check the backend logs. A 404 on `POST /api/v1/auth/forgot-password` means the running backend needs the reset release. A 503 means delivery is disabled. After a request for a registered account, `Gmail authorization returned HTTP …` points to the sender grant. `Gmail message submission returned HTTP …` identifies a rejection at the sending step. If Gmail accepted the message, check the recipient's Spam folder or, for a managed mailbox, its mail quarantine.
+
+## Send reset links with Resend
 
 For an initial test to your own inbox, a custom domain is not required:
 
