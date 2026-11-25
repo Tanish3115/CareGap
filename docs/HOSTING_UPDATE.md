@@ -10,22 +10,7 @@ The target is the existing app at https://caregap360.vercel.app, using the persi
 
 ## Configure mail in Render
 
-For a **Gmail sender**, authorize one mailbox with the setup command and import its six settings into the existing persistent Render backend. Deploy the latest `main` commit, then request a fresh link for a registered test account. [Gmail setup and delivery verification](PASSWORD_RECOVERY.md#send-reset-links-with-gmail-on-render)
-
-For a **Resend sender**, add the following four values in the existing backend service's **Environment** settings.
-
-```dotenv
-PASSWORD_RESET_DELIVERY=resend
-PASSWORD_RESET_BASE_URL=https://caregap360.vercel.app
-PASSWORD_RESET_FROM_EMAIL=accounts@YOUR_VERIFIED_SENDING_DOMAIN
-RESEND_API_KEY=YOUR_PRIVATE_RESEND_SENDING_KEY
-```
-
-Enter the actual Resend sending key only in Render's secret environment settings. Local `backend/.env` changes do not configure the hosted service. No email credential belongs in Vercel, source control or a `NEXT_PUBLIC_*` variable.
-
-For an initial test, `onboarding@resend.dev` can send only to the email associated with the Resend account. It cannot provide recovery for all registered patients and doctors. Verify a domain you control and use an address at that domain for general delivery. The university address can receive email, but is not a sending domain you control. See [Resend's test-sender restriction](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain) and [domain verification](https://resend.com/docs/dashboard/domains/introduction).
-
-Keep `PASSWORD_RESET_DELIVERY=disabled` until credentials and the sender are ready. The API then reports recovery unavailable. Configuring `resend` without the required key/sender fails validation. The Blueprint leaves these values operator-managed so a later Blueprint sync cannot replace a working delivery mode with `disabled`.
+CareGap sends customer email from `admin.caregap@gmail.com`. Authorize this mailbox with the Gmail setup command and import its six settings into the existing persistent Render backend. Keep the Google credentials in that backend's environment. The Blueprint specifies the sending address and leaves the delivery mode under operator control. Once the sender grant is ready, deploy the latest `main` commit and request a fresh link for a registered test account. [Gmail setup and delivery verification](PASSWORD_RECOVERY.md#send-reset-links-with-gmail-on-render)
 
 ## Deploy the release
 

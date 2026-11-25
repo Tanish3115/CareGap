@@ -4,6 +4,7 @@ import base64
 import logging
 from email import policy
 from email.message import EmailMessage
+from urllib.parse import quote
 
 from httpx import Client, Response
 
@@ -37,8 +38,10 @@ def send_gmail(message: EmailMessage) -> None:
         access = _google_value(grant, "access_token", "authorization")
 
         raw = base64.urlsafe_b64encode(message.as_bytes(policy=policy.SMTPUTF8)).decode("ascii")
+        # Address the configured mailbox explicitly so a grant for a different account cannot send as itself.
+        mailbox = quote(str(settings.PASSWORD_RESET_FROM_EMAIL), safe="")
         sent = google.post(
-            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            f"https://gmail.googleapis.com/gmail/v1/users/{mailbox}/messages/send",
             headers={"Authorization": f"Bearer {access}"},
             json={"raw": raw},
         )

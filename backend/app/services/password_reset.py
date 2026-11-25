@@ -79,7 +79,7 @@ def send_reset_email(recipient, token):
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {settings.RESEND_API_KEY.get_secret_value()}"},
             json={
-                "from": str(settings.PASSWORD_RESET_FROM_EMAIL),
+                "from": str(message["From"]),
                 "to": [recipient],
                 "subject": str(message["Subject"]),
                 "text": message.get_content(),

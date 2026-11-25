@@ -63,14 +63,17 @@ def authorize(client_file, sender):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("client_json", type=Path, help="Path to your downloaded Desktop app client JSON")
-    parser.add_argument("--sender", help="Gmail or Google Workspace address that will send the reset links")
+    parser.add_argument(
+        "--sender",
+        default="admin.caregap@gmail.com",
+        help="Sending mailbox (default: %(default)s)",
+    )
     parser.add_argument(
         "--origin", default="https://caregap360.vercel.app", help="Public CareGap frontend origin"
     )
     args = parser.parse_args()
-    sender = args.sender or input("Gmail address to send CareGap reset emails from: ")
     try:
-        values = delivery_settings("gmail", sender, args.origin)
+        values = delivery_settings("gmail", args.sender, args.origin)
     except ValueError:
         raise SystemExit("Enter a valid sender address and frontend origin.") from None
     if not values["PASSWORD_RESET_BASE_URL"].startswith("https://"):

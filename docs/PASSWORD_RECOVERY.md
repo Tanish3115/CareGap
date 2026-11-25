@@ -6,11 +6,11 @@ Request responses do not reveal whether an account exists or is active. Account 
 
 ## Send reset links with Gmail on Render
 
-CareGap sends from one Gmail or Google Workspace mailbox authorized by the app operator. Patients, doctors and administrators request a link for the address already registered with CareGap. The backend uses Google's HTTPS Gmail API, which works on Render's free tier with its SMTP port restrictions. [Gmail sending guide](https://developers.google.com/workspace/gmail/api/guides/sending) · [Render free web services](https://render.com/docs/free#outbound-smtp-traffic)
+CareGap's administrator mailbox and customer email sender is `admin.caregap@gmail.com`. Password resets are the customer emails CareGap sends today. Each goes directly to the account's registered address. The backend submits the message to the configured sender's Gmail mailbox over HTTPS. Google checks that the sender grant can use that mailbox. [Gmail send endpoint](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send) · [Render free web services](https://render.com/docs/free#outbound-smtp-traffic)
 
 1. In the CareGap Google Cloud project, enable the Gmail API. Under **Google Auth Platform**, configure the app's branding and audience and add the `https://www.googleapis.com/auth/gmail.send` scope under **Data Access**. If your app is in external Testing, add the sender mailbox as a test user. [Enable Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) · [Google consent setup](https://developers.google.com/workspace/guides/configure-oauth-consent) · [Gmail scope permissions](https://developers.google.com/workspace/gmail/api/auth/scopes)
 2. Under **Clients**, create a **Desktop app** OAuth client for the setup command. Download its JSON to a private location outside the repository. [Create a desktop client](https://developers.google.com/workspace/guides/create-credentials#desktop-app)
-3. From the CareGap repository, run the command below with the downloaded file's path. Enter the sending address and approve sending in Google's browser window using that mailbox. The setup command uses Google's OAuth library with a loopback callback and PKCE. [Google desktop OAuth flow](https://developers.google.com/identity/protocols/oauth2/native-app)
+3. From the CareGap repository, run the command below with the downloaded file's path. In Google's browser window, sign in as `admin.caregap@gmail.com` and approve sending. The setup selects that address by default. [Google desktop OAuth flow](https://developers.google.com/identity/protocols/oauth2/native-app)
 
    ```powershell
    uv run scripts/authorize_gmail.py "C:\path\to\your-google-client.json"
@@ -23,7 +23,7 @@ The generated settings are `PASSWORD_RESET_DELIVERY=gmail`, `PASSWORD_RESET_BASE
 
 If a request produces no mail, check the backend logs. A 404 on `POST /api/v1/auth/forgot-password` means the running backend needs the reset release. A 503 means delivery is disabled. After a request for a registered account, `Gmail authorization returned HTTP …` points to the sender grant. `Gmail message submission returned HTTP …` identifies a rejection at the sending step. If Gmail accepted the message, check the recipient's Spam folder or, for a managed mailbox, its mail quarantine.
 
-## Send reset links with Resend
+## Use Resend for a different deployment
 
 For an initial test to your own inbox, a custom domain is not required:
 

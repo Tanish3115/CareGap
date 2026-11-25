@@ -16,9 +16,9 @@ from app.models.password_reset import PasswordResetToken
 from app.services import gmail_delivery
 
 ORIGIN = "https://caregap.example.com"
-SENDER = "sender@example.com"
+SENDER = "sender+caregap@example.com"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
-SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/sender%2Bcaregap%40example.com/messages/send"
 GMAIL = {
     "GMAIL_CLIENT_ID": "synthetic-client",
     "GMAIL_CLIENT_SECRET": "synthetic-client-secret",
@@ -43,7 +43,15 @@ def google_transport(monkeypatch):
     return install
 
 
-def test_gmail_message_from_forgot_password_to_login(client, db_session, patient_user, google_transport):
+def test_gmail_message_from_forgot_password_to_login(
+    client, db_session, patient_user, google_transport, monkeypatch
+):
+    monkeypatch.delenv("PASSWORD_RESET_FROM_EMAIL", raising=False)
+    defaults = Settings(
+        _env_file=None, SECRET_KEY="synthetic-test-key-long-enough-for-gmail", ENVIRONMENT="test"
+    )
+    monkeypatch.setattr(settings, "PASSWORD_RESET_FROM_EMAIL", defaults.PASSWORD_RESET_FROM_EMAIL)
+    mailbox_url = "https://gmail.googleapis.com/gmail/v1/users/admin.caregap%40gmail.com/messages/send"
     calls, messages = [], []
 
     def google(request):
@@ -58,7 +66,9 @@ def test_gmail_message_from_forgot_password_to_login(client, db_session, patient
                 "refresh_token": [GMAIL["GMAIL_REFRESH_TOKEN"]],
             }
             return httpx.Response(200, json={"access_token": "synthetic-access", "token_type": "Bearer"})
-        assert str(request.url) == SEND_URL and request.headers["Authorization"] == "Bearer synthetic-access"
+        assert (
+            str(request.url) == mailbox_url and request.headers["Authorization"] == "Bearer synthetic-access"
+        )
         payload = json.loads(request.content)
         assert set(payload) == {"raw"}
         messages.append(BytesParser(policy=policy.default).parsebytes(urlsafe_b64decode(payload["raw"])))
@@ -74,9 +84,10 @@ def test_gmail_message_from_forgot_password_to_login(client, db_session, patient
     known = request_link(patient_user.email)
     assert known.status_code == unknown.status_code == 202
     assert known.json() == unknown.json() and known.json()["delivery"] == "email"
-    assert calls == [TOKEN_URL, SEND_URL]
+    assert calls == [TOKEN_URL, mailbox_url]
     (message,) = messages
-    assert str(message["To"]) == patient_user.email and str(message["From"]) == SENDER
+    assert str(message["To"]) == patient_user.email and str(message["From"]) == "admin.caregap@gmail.com"
+    assert message["Cc"] is None and message["Bcc"] is None
     assert message["Subject"] == "Reset your CareGap 360 password"
     plain = message.get_body(preferencelist=("plain",)).get_content()
     html = message.get_body(preferencelist=("html",)).get_content()

@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,25 @@ setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
 
 KEY = "re_synthetic_test_key_not_for_external_use"
+
+
+def test_gmail_setup_selects_the_customer_sender(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(path.parent))
+    import authorize_gmail
+
+    selected = []
+
+    def authorize(_client_file, sender):
+        selected.append(sender)
+        return {"GMAIL_REFRESH_TOKEN": "synthetic-grant"}
+
+    monkeypatch.setattr(authorize_gmail, "authorize", authorize)
+    monkeypatch.setattr(authorize_gmail.tempfile, "tempdir", str(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["authorize_gmail.py", "synthetic-desktop.json"])
+    authorize_gmail.main()
+    (settings_file,) = tmp_path.glob("caregap-gmail-*.env")
+    assert selected == ["admin.caregap@gmail.com"]
+    assert dotenv_values(settings_file)["PASSWORD_RESET_FROM_EMAIL"] == selected[0]
 
 
 def test_setup_preserves_existing_secrets_database_and_comments(tmp_path, capsys):

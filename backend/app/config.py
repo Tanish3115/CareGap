@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     SMTP_SECURITY: Literal["starttls", "tls"] = "starttls"
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: SecretStr = SecretStr("")
-    PASSWORD_RESET_FROM_EMAIL: EmailStr | None = None
+    PASSWORD_RESET_FROM_EMAIL: EmailStr | None = "admin.caregap@gmail.com"
     RESEND_API_KEY: SecretStr = SecretStr("")
     GMAIL_CLIENT_ID: str = ""
     GMAIL_CLIENT_SECRET: SecretStr = SecretStr("")
