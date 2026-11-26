@@ -1,4 +1,6 @@
 {
+  "Show password": "पासवर्ड दिखाएँ",
+  "Hide password": "पासवर्ड छिपाएँ",
   "Clear filters": "फ़िल्टर हटाएँ",
   "No patients match your search.": "आपकी खोज से कोई मरीज़ नहीं मिला।",
   " · Engine confidence {value0}%": " · OCR इंजन का विश्वास {value0}%",

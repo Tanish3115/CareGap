@@ -1,12 +1,13 @@
 "use client";
 
+import { PasswordInput } from "@/components/PasswordInput";
 import { useLanguage } from "@/components/LanguageProvider";
 
 import type React from "react";
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Activity, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { setAuthSession } from "@/lib/auth";
@@ -97,21 +98,17 @@ export default function LoginPage() {
                 {" "}
                 {t("Password")}{" "}
               </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                  <Lock className="h-4 w-4" />
-                </div>
-                <input
-                  id={`${formId}-field-2`}
-                  type="password"
-                  aria-label={t("Password")}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
+              <PasswordInput
+                id={`${formId}-field-2`}
+                showLock
+                autoComplete="current-password"
+                aria-label={t("Password")}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-slate-300 pl-10 pr-12 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              />
             </div>
 
             <div className="flex justify-end">

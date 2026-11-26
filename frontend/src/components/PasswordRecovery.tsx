@@ -4,12 +4,15 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Activity, Loader2, Mail, ShieldCheck } from "lucide-react";
 import { LanguageSwitcher, useLanguage } from "./LanguageProvider";
+import { PasswordInput } from "./PasswordInput";
 import { api } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
 const invalidLink = "This password reset link is invalid or has expired. Please request a new link.";
 const field =
   "mt-2 min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900";
+const passwordField =
+  "min-h-12 w-full rounded-lg border border-slate-300 bg-white pl-3 pr-12 py-2 text-base text-slate-900";
 const button =
   "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50";
 
@@ -185,9 +188,9 @@ export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
                       <label htmlFor={`${formId}-password`} className="text-sm font-semibold text-slate-700">
                         {t("New password")}
                       </label>
-                      <input
+                      <PasswordInput
                         id={`${formId}-password`}
-                        type="password"
+                        wrapperClassName="mt-2"
                         autoComplete="new-password"
                         required
                         minLength={12}
@@ -195,7 +198,7 @@ export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
                         aria-describedby={`${formId}-hint`}
-                        className={field}
+                        className={passwordField}
                         disabled={busy}
                       />
                       <p id={`${formId}-hint`} className="mt-2 text-sm text-slate-600">
@@ -206,16 +209,16 @@ export function PasswordRecovery({ mode }: { mode: "request" | "reset" }) {
                       <label htmlFor={`${formId}-confirm`} className="text-sm font-semibold text-slate-700">
                         {t("Confirm new password")}
                       </label>
-                      <input
+                      <PasswordInput
                         id={`${formId}-confirm`}
-                        type="password"
+                        wrapperClassName="mt-2"
                         autoComplete="new-password"
                         required
                         minLength={12}
                         maxLength={72}
                         value={confirmation}
                         onChange={(event) => setConfirmation(event.target.value)}
-                        className={field}
+                        className={passwordField}
                         disabled={busy}
                       />
                     </div>
